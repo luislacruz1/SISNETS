@@ -17,6 +17,7 @@ import Swal from 'sweetalert2';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import PeruFlag from './common/PeruFlag';
+import { supabase } from '../lib/supabaseClient';
 
 export default function AuthSection({ isOpen, onClose }) {
   const { isDarkMode } = useTheme();
@@ -45,23 +46,67 @@ export default function AuthSection({ isOpen, onClose }) {
     }
   }, []);
 
-  const handleForgotPassword = () => {
-    Swal.fire({
-      icon: 'info',
+  const handleForgotPassword = async () => {
+    const { value: email } = await Swal.fire({
       title: 'Recuperar Contraseña',
-      html: `
-        <div class="text-left text-xs text-slate-600 dark:text-slate-300 space-y-2.5">
-          <p>Por motivos de seguridad institucional en <strong>SISNETS</strong>, comunícate con la administración para validar tu colegiatura/prácticas y restablecer tu clave:</p>
-          <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl space-y-1 text-slate-700 dark:text-slate-200 font-semibold">
-            <p>📧 <strong>Correo:</strong> soporte@trabajosocial.org</p>
-            <p>📱 <strong>WhatsApp Red:</strong> +51 987 654 321</p>
-          </div>
-          <p class="text-[10.5px] text-slate-400">Atención inmediata a colegas y estudiantes acreditadas.</p>
-        </div>
-      `,
-      confirmButtonText: 'Entendido',
-      confirmButtonColor: '#0A1128'
+      text: 'Ingresa tu correo electrónico registrado y te enviaremos un enlace seguro para crear una nueva clave:',
+      input: 'email',
+      inputValue: formData.correo || '',
+      inputPlaceholder: 'tu.correo@ejemplo.com',
+      showCancelButton: true,
+      confirmButtonText: 'Enviar Enlace',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0A1128',
+      cancelButtonColor: '#94a3b8',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Por favor ingresa tu correo electrónico';
+        }
+      }
     });
+
+    if (email) {
+      Swal.fire({
+        title: 'Enviando enlace...',
+        text: 'Por favor espera un momento.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        const redirectUrl = `${window.location.origin}/reset-password`;
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: redirectUrl
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Correo Enviado!',
+          html: `
+            <div class="text-left text-xs text-slate-600 dark:text-slate-300 space-y-2">
+              <p>Hemos enviado un enlace de recuperación a: <strong>${email}</strong>.</p>
+              <p>Revisa tu bandeja de entrada (y la carpeta de spam o no deseados) y haz clic en el botón para crear tu nueva contraseña.</p>
+            </div>
+          `,
+          confirmButtonColor: '#0A1128',
+          confirmButtonText: 'Entendido'
+        });
+      } catch (err) {
+        console.error('Error al enviar correo de recuperación:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo enviar',
+          text: err.message || 'Verifica que el correo esté registrado o intenta de nuevo.',
+          confirmButtonColor: '#0A1128'
+        });
+      }
+    }
   };
 
   const [passStrength, setPassStrength] = useState({ percent: 0, label: '', color: '' });

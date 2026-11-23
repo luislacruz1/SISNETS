@@ -28,6 +28,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import DynamicNetworkCanvas from '../components/DynamicNetworkCanvas';
 import PeruFlag from '../components/common/PeruFlag';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Login() {
   const { user, login, logout } = useAuth();
@@ -39,6 +40,49 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockActive, setCapsLockActive] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const handleSendRecoveryEmail = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+    setForgotLoading(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: redirectUrl
+      });
+
+      if (error) throw error;
+
+      setShowForgotModal(false);
+      setForgotEmail('');
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Correo de Recuperación Enviado!',
+        html: `
+          <div class="text-left text-xs text-slate-600 dark:text-slate-300 space-y-2">
+            <p>Hemos enviado un enlace seguro a: <strong>${forgotEmail}</strong>.</p>
+            <p>Revisa tu bandeja de entrada o spam y haz clic en el enlace para restablecer tu clave.</p>
+          </div>
+        `,
+        confirmButtonColor: '#0A1128',
+        confirmButtonText: 'Entendido'
+      });
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo enviar el correo',
+        text: err.message || 'Verifica el correo ingresado o intenta de nuevo.',
+        confirmButtonColor: '#0A1128'
+      });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -733,7 +777,7 @@ export default function Login() {
       </motion.div>
 
       {/* ==================================================================== */}
-      {/* MODAL RECUPERACIÓN DE CONTRASEÑA (Mismo estilo exacto de SISGEIN)    */}
+      {/* MODAL RECUPERACIÓN DE CONTRASEÑA VÍA CORREO                          */}
       {/* ==================================================================== */}
       <AnimatePresence>
         {showForgotModal && (
@@ -742,39 +786,76 @@ export default function Login() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-[#050B18]/60 dark:bg-slate-950/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#050B18]/70 dark:bg-slate-950/85 backdrop-blur-sm"
               onClick={() => setShowForgotModal(false)}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 sm:p-10 max-w-sm w-full shadow-2xl relative z-10 overflow-hidden ring-1 ring-slate-900/5 dark:ring-white/10"
+              className="bg-white dark:bg-slate-900 rounded-[2rem] p-7 sm:p-9 max-w-sm w-full shadow-2xl relative z-10 overflow-hidden border border-slate-200 dark:border-slate-800"
             >
               <button
+                type="button"
                 onClick={() => setShowForgotModal(false)}
-                className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-all"
+                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
+                title="Cerrar"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="w-16 h-16 mx-auto mb-6 bg-cyan-50 dark:bg-cyan-950/40 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-                <Info size={30} strokeWidth={2.5} />
+              <div className="w-14 h-14 mx-auto mb-4 bg-cyan-50 dark:bg-cyan-950/40 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm">
+                <Mail size={26} strokeWidth={2.5} />
               </div>
 
-              <h3 className="text-xl font-black text-slate-900 dark:text-white text-center mb-3 uppercase tracking-tight">
-                Recuperar Acceso
+              <h3 className="text-lg font-black text-slate-900 dark:text-white text-center mb-1.5 uppercase tracking-tight">
+                Recuperar Contraseña
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6 font-medium leading-relaxed">
-                Por motivos de seguridad y secreto profesional, el restablecimiento de credenciales requiere confirmación con el <span className="text-slate-800 dark:text-slate-200 font-bold">Comité de Validación Colegial</span>.
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-5 font-medium leading-relaxed">
+                Ingresa tu correo registrado y te enviaremos un enlace seguro para crear una nueva clave.
               </p>
 
-              <button
-                onClick={() => setShowForgotModal(false)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-4 rounded-2xl transition-all duration-300 text-[11px] uppercase tracking-widest border border-slate-200 dark:border-slate-700"
-              >
-                Entendido
-              </button>
+              <form onSubmit={handleSendRecoveryEmail} className="space-y-3.5">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Correo Electrónico
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-cyan-500">
+                      <Mail size={16} />
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      placeholder="profesional@trabajosocial.org"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 pl-9 pr-3 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs uppercase tracking-wider transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="flex-1 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5"
+                  >
+                    {forgotLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      'Enviar Enlace'
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
