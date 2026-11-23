@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Lock, 
-  Mail, 
-  Loader2, 
-  AlertCircle, 
-  Eye, 
-  EyeOff, 
+import {
+  User,
+  Lock,
+  Mail,
+  Loader2,
+  AlertCircle,
+  Eye,
+  EyeOff,
   ArrowRight,
   X,
   Phone
@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import PeruFlag from './common/PeruFlag';
 
 export default function AuthSection({ isOpen, onClose }) {
   const { isDarkMode } = useTheme();
@@ -88,8 +89,8 @@ export default function AuthSection({ isOpen, onClose }) {
 
       const loggedUser = {
         id: isRuth ? 'admin_ruth' : (isAdmin ? 'admin_user' : ('ts_' + Date.now())),
-        nombre: isRuth 
-          ? 'Ruth Anastacio' 
+        nombre: isRuth
+          ? 'Ruth Anastacio'
           : (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Ruth Anastacio'),
         correo: formData.correo,
         rol: isAdmin ? 'admin' : 'colegiada',
@@ -165,7 +166,7 @@ export default function AuthSection({ isOpen, onClose }) {
         >
           <X size={18} />
         </button>
-        
+
         {/* PANEL IZQUIERDO: Imagen Profesional + Branding SISNETS */}
         <div className="hidden md:flex md:w-1/2 relative overflow-hidden bg-[#0A1128] text-white p-8 lg:p-10 flex-col justify-between border-r border-slate-800/60 dark:border-slate-800/80 min-h-[580px]">
           {/* Imagen de Fondo: Colega Profesional */}
@@ -220,9 +221,9 @@ export default function AuthSection({ isOpen, onClose }) {
 
         {/* PANEL DERECHO: Formulario Moderno SISNETS */}
         <div className="w-full md:w-1/2 bg-white dark:bg-slate-900 flex flex-col justify-between p-6 sm:p-10 relative overflow-y-auto">
-          
+
           <div className="max-w-md w-full mx-auto my-auto">
-            
+
             {/* Header del Formulario: Solo SISNETS */}
             <div className="text-center mb-5">
               <div className="flex items-center justify-center mx-auto mb-2">
@@ -246,22 +247,20 @@ export default function AuthSection({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => { setMode('login'); setError(null); }}
-                className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider ${
-                  mode === 'login'
-                    ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                }`}
+                className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider ${mode === 'login'
+                  ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
               >
                 Ingresar
               </button>
               <button
                 type="button"
                 onClick={() => { setMode('register'); setError(null); }}
-                className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider ${
-                  mode === 'register'
-                    ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                }`}
+                className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider ${mode === 'register'
+                  ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
               >
                 Registrarme
               </button>
@@ -269,9 +268,9 @@ export default function AuthSection({ isOpen, onClose }) {
 
             {/* Alerta de Error */}
             {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: -8 }} 
-                animate={{ opacity: 1, y: 0 }} 
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
                 className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 p-3 rounded-xl flex items-center gap-2 text-rose-600 dark:text-rose-400 text-xs font-bold uppercase mb-4"
               >
                 <AlertCircle size={16} className="flex-shrink-0" />
@@ -281,7 +280,7 @@ export default function AuthSection({ isOpen, onClose }) {
 
             {/* Formulario */}
             <form onSubmit={handleSubmit} className="space-y-3.5">
-              
+
               {mode === 'register' && (
                 <>
                   <div className="space-y-1">
@@ -295,7 +294,7 @@ export default function AuthSection({ isOpen, onClose }) {
                       <input
                         type="text"
                         required
-                        placeholder="Ej. Lic. Mariana Gómez"
+                        placeholder="Ej. Mariana Gómez Sanchez"
                         value={formData.nombreCompleto}
                         onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
                         className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-cyan-500/15 focus:border-cyan-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm"
@@ -307,15 +306,13 @@ export default function AuthSection({ isOpen, onClose }) {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        WhatsApp de Contacto Profesional
+                        WhatsApp de Contacto
                       </label>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                        Directorio
-                      </span>
+
                     </div>
                     <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 focus-within:ring-4 focus-within:ring-emerald-500/15 focus-within:border-emerald-500 focus-within:bg-white dark:focus-within:bg-slate-800 transition-all shadow-sm">
                       <div className="flex items-center gap-1.5 px-3 py-3 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 select-none">
-                        <span className="text-base leading-none">🇵🇪</span>
+                        <PeruFlag className="w-[19px] h-[13px]" />
                         <span className="text-xs font-black text-slate-700 dark:text-slate-200 tracking-wide">+51</span>
                       </div>
                       <input
@@ -333,7 +330,7 @@ export default function AuthSection({ isOpen, onClose }) {
                       />
                     </div>
                     <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-tight">
-                      🔒 Se usará para enlazar tu botón de contacto cuando registres tu centro en el directorio.
+                      🔒 Se usará para enlazar tu botón de contacto con el directorio.
                     </p>
                   </div>
                 </>

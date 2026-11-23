@@ -19,6 +19,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { isMasculineName } from '../utils/genderHelper';
+import PeruFlag from './common/PeruFlag';
 
 const OPCIONES_FORTALEZAS = [
   'PUEDO DAR ORIENTACION Y RESOLUCION DE CASOS SOCIALES',
@@ -249,7 +250,7 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
               </label>
               <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-all">
                 <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 select-none">
-                  <span className="text-base leading-none">🇵🇪</span>
+                  <PeruFlag className="w-[19px] h-[13px]" />
                   <span className="text-xs font-black text-slate-700 dark:text-slate-200 tracking-wide">+51</span>
                 </div>
                 <input

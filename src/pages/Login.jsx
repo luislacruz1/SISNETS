@@ -27,6 +27,7 @@ import Swal from 'sweetalert2';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import DynamicNetworkCanvas from '../components/DynamicNetworkCanvas';
+import PeruFlag from '../components/common/PeruFlag';
 
 export default function Login() {
   const { user, login, logout } = useAuth();
@@ -519,7 +520,7 @@ export default function Login() {
                     </div>
                     <div className="flex rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 focus-within:ring-4 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all shadow-sm">
                       <div className="flex items-center gap-1.5 px-3.5 py-3 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 select-none">
-                        <span className="text-base leading-none">🇵🇪</span>
+                        <PeruFlag className="w-[19px] h-[13px]" />
                         <span className="text-xs font-black text-slate-700 dark:text-slate-200 tracking-wide">+51</span>
                       </div>
                       <input
