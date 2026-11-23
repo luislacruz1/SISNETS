@@ -8,7 +8,7 @@ export const INITIAL_REGISTERED_USERS = [
     telefono: '+51 987 654 321',
     rol: 'admin',
     condicion: 'egresada',
-    centro: 'Red de Colegas de Trabajo Social (Sede Central)',
+    centro: 'SISNETS (Sede Central)',
     sector: 'Comunitario / ONGs',
     estado: 'activa',
     verificada: true,

@@ -2,24 +2,65 @@ import React, { useState, useMemo } from 'react';
 import {
   Search,
   X,
-  Download,
   Crown,
   Phone,
   Mail,
-  ShieldCheck,
   Trash2,
   Building2,
   GraduationCap,
   Users,
-  LayoutGrid,
-  Table as TableIcon,
+  ChevronDown,
+  Check,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Sparkles,
-  UserCheck
+  UserX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Opciones del selector desplegable moderno para usuarias
+const USER_FILTER_OPTIONS = [
+  {
+    id: 'todos',
+    label: 'Todas las Colegas',
+    sublabel: 'Comunidad completa',
+    icon: Users,
+    badgeColor: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400 border-blue-200/60 dark:border-blue-800/40',
+    activeColor: 'text-blue-600 dark:text-cyan-400'
+  },
+  {
+    id: 'admin',
+    label: 'Administradoras',
+    sublabel: 'Gestión y control de red',
+    icon: Crown,
+    badgeColor: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/40',
+    activeColor: 'text-amber-600 dark:text-amber-400'
+  },
+  {
+    id: 'egresada',
+    label: 'Egresada(o)',
+    sublabel: 'Tituladas y graduadas',
+    icon: Building2,
+    badgeColor: 'bg-fuchsia-50 dark:bg-fuchsia-950/60 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-200/60 dark:border-fuchsia-800/40',
+    activeColor: 'text-fuchsia-600 dark:text-fuchsia-400'
+  },
+  {
+    id: 'practicante',
+    label: 'Practicante',
+    sublabel: 'Prácticas pre-profesionales',
+    icon: GraduationCap,
+    badgeColor: 'bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 border-violet-200/60 dark:border-violet-800/40',
+    activeColor: 'text-violet-600 dark:text-violet-400'
+  },
+  {
+    id: 'suspendidas',
+    label: 'Cuentas Pausadas',
+    sublabel: 'Acceso suspendido temporal',
+    icon: UserX,
+    badgeColor: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/40',
+    activeColor: 'text-rose-600 dark:text-rose-400'
+  }
+];
 
 export default function UsersManagement({
   userSearchTerm,
@@ -28,30 +69,27 @@ export default function UsersManagement({
   setUserFilterRole,
   filteredUsers = [],
   registeredUsers = [],
-  handleExportUsersCSV,
   handleToggleUserRole,
-  handleToggleUserVerify,
   handleToggleUserStatus,
   handleDeleteUser
 }) {
-  // Modo de visualización: 'cards' (por defecto) o 'table'
-  const [viewMode, setViewMode] = useState('cards');
+  // Control del desplegable de filtro moderno
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Paginación local para el módulo de usuarias
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = viewMode === 'cards' ? 9 : 12;
+  const itemsPerPage = 9;
 
-  // Lista base para estadísticas (usa registeredUsers si está disponible, o filteredUsers)
+  // Lista base para estadísticas
   const allUsers = registeredUsers.length > 0 ? registeredUsers : filteredUsers;
 
-  // Métricas rápidas del módulo de usuarias
+  // Métricas rápidas limpias (Sin sellos)
   const stats = useMemo(() => {
     const total = allUsers.length;
     const admins = allUsers.filter((u) => u.rol === 'admin').length;
-    const verificadas = allUsers.filter((u) => !!u.verificada).length;
     const egresadas = allUsers.filter((u) => u.condicion === 'egresada').length;
     const practicantes = allUsers.filter((u) => u.condicion === 'practicante').length;
-    return { total, admins, verificadas, egresadas, practicantes };
+    return { total, admins, egresadas, practicantes };
   }, [allUsers]);
 
   // Cálculo de paginación
@@ -61,8 +99,9 @@ export default function UsersManagement({
     return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredUsers, startIndex, itemsPerPage]);
 
-  const handleFilterChange = (roleId) => {
+  const handleSelectFilter = (roleId) => {
     setUserFilterRole(roleId);
+    setIsFilterOpen(false);
     setCurrentPage(1);
   };
 
@@ -71,13 +110,17 @@ export default function UsersManagement({
     setCurrentPage(1);
   };
 
+  // Opción activa actual
+  const currentFilterOption = USER_FILTER_OPTIONS.find((o) => o.id === userFilterRole) || USER_FILTER_OPTIONS[0];
+  const ActiveIcon = currentFilterOption.icon;
+
   return (
     <div className="space-y-5">
       {/* ------------------------------------------------------------------ */}
-      {/* 1. TARJETAS DE RESUMEN / MÉTRICAS RÁPIDAS                          */}
+      {/* 1. TARJETAS DE RESUMEN LIMPIAS (SIN SELLO)                         */}
       {/* ------------------------------------------------------------------ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Usuarias */}
+        {/* Total Miembros */}
         <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
             <Users size={20} />
@@ -88,21 +131,6 @@ export default function UsersManagement({
             </span>
             <span className="text-lg sm:text-xl font-black text-[#0A1128] dark:text-white leading-tight">
               {stats.total}
-            </span>
-          </div>
-        </div>
-
-        {/* Verificadas */}
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <ShieldCheck size={20} />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block truncate">
-              Sello Verificado
-            </span>
-            <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 leading-tight">
-              {stats.verificadas}
             </span>
           </div>
         </div>
@@ -122,517 +150,348 @@ export default function UsersManagement({
           </div>
         </div>
 
-        {/* Egresadas y Practicantes */}
+        {/* Egresadas */}
         <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400 flex items-center justify-center shrink-0">
+            <Building2 size={20} />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block truncate">
+              Egresadas(os)
+            </span>
+            <span className="text-lg sm:text-xl font-black text-[#0A1128] dark:text-white leading-tight">
+              {stats.egresadas}
+            </span>
+          </div>
+        </div>
+
+        {/* Practicantes */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
             <GraduationCap size={20} />
           </div>
           <div className="min-w-0">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block truncate">
-              Egresadas / Pract.
+              Practicantes
             </span>
             <span className="text-lg sm:text-xl font-black text-[#0A1128] dark:text-white leading-tight">
-              {stats.egresadas} <span className="text-xs font-bold text-slate-400">/ {stats.practicantes}</span>
+              {stats.practicantes}
             </span>
           </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 2. BARRA DE HERRAMIENTAS: BÚSQUEDA, FILTROS Y VISTAS               */}
+      {/* 2. BARRA DE BÚSQUEDA + DESPLEGABLE (IDÉNTICO AL DIRECTORIO)        */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Buscador */}
-          <div className="relative flex-1 group">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
-            <input
-              type="text"
-              value={userSearchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Buscar colega por nombre, correo, centro o sector..."
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 transition"
-            />
-            {userSearchTerm && (
-              <button
-                type="button"
-                onClick={() => handleSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 flex items-center justify-center transition"
-                title="Limpiar búsqueda"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Controles de Vista y Exportación */}
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-            {/* Conmutador de Vista (Cards / Tabla en pantallas medianas+) */}
-            <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setViewMode('cards')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                  viewMode === 'cards'
-                    ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-                title="Vista en cuadrícula de tarjetas"
-              >
-                <LayoutGrid size={14} />
-                <span>Cards</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-                title="Vista en tabla detallada"
-              >
-                <TableIcon size={14} />
-                <span>Tabla</span>
-              </button>
-            </div>
-
-            {/* Exportar CSV */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Buscador */}
+        <div className="relative flex-1 group">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0A1128] dark:group-focus-within:text-cyan-400 transition-colors" />
+          <input
+            type="text"
+            value={userSearchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Buscar colega por nombre, correo, centro o sector..."
+            className="w-full bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm rounded-xl pl-12 pr-12 py-3.5 focus:outline-none focus:border-[#0A1128] dark:focus:border-cyan-400 focus:ring-1 focus:ring-[#0A1128] dark:focus:ring-cyan-400 transition-all shadow-sm placeholder:text-slate-400 font-semibold"
+          />
+          {userSearchTerm && (
             <button
               type="button"
-              onClick={handleExportUsersCSV}
-              className="px-3.5 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-400/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/40 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition shrink-0 active:scale-95 shadow-sm"
-              title="Exportar listado a Excel / CSV"
+              onClick={() => handleSearchChange('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-700 rounded-lg transition"
+              title="Borrar búsqueda"
             >
-              <Download size={14} />
-              <span>Exportar</span>
+              <X size={15} />
             </button>
-          </div>
+          )}
         </div>
 
-        {/* Pestañas de Filtros Rápidos */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-0.5">
-          {[
-            { id: 'todos', label: 'Todas', count: stats.total },
-            { id: 'admin', label: 'Admins', count: stats.admins },
-            { id: 'egresada', label: 'Egresadas', count: stats.egresadas },
-            { id: 'practicante', label: 'Practicantes', count: stats.practicantes },
-            { id: 'verificadas', label: 'Verificadas', count: stats.verificadas },
-            { id: 'suspendidas', label: 'Suspendidas' }
-          ].map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => handleFilterChange(f.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-                userFilterRole === f.id
-                  ? 'bg-[#0A1128] dark:bg-cyan-500 text-white dark:text-[#050B18] shadow-sm'
-                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <span>{f.label}</span>
-              {typeof f.count === 'number' && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  userFilterRole === f.id
-                    ? 'bg-white/20 dark:bg-black/20 text-white dark:text-[#050B18]'
-                    : 'bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
-                }`}>
-                  {f.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 3. CONTENIDO: VISTA EN CARDS (MÓVIL Y ESCRITORIO MODERNO)          */}
-      {/* ------------------------------------------------------------------ */}
-      {/* En celular SIEMPRE se muestra en cards, en desktop según viewMode */}
-      <div className={viewMode === 'table' ? 'block sm:hidden' : 'block'}>
-        {filteredUsers.length > 0 ? (
-          <motion.div
-            layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
+        {/* Desplegable Moderno de Filtro (Igual que en Directorio) */}
+        <div className="relative shrink-0 sm:w-64">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen((prev) => !prev)}
+            className="w-full py-3.5 pl-3.5 pr-4 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-all select-none active:scale-[0.99] group"
+            aria-expanded={isFilterOpen}
           >
-            <AnimatePresence mode="popLayout">
-              {paginatedUsers.map((u) => {
-                const isPracticante = u.condicion === 'practicante';
-                const isAdmin = u.rol === 'admin';
-                const isActiva = u.estado === 'activa';
-                const isVerificada = !!u.verificada;
-
-                return (
-                  <motion.div
-                    key={u.id}
-                    layout
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ duration: 0.22 }}
-                    className="relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-400/80 dark:hover:border-cyan-500/80 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group overflow-hidden"
-                  >
-                    {/* Barra Superior con Acento de Color Dinámico */}
-                    <div
-                      className={`absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r ${
-                        isAdmin
-                          ? 'from-amber-400 via-orange-500 to-amber-600'
-                          : isPracticante
-                            ? 'from-violet-500 via-indigo-500 to-cyan-400'
-                            : 'from-fuchsia-500 via-pink-500 to-rose-400'
-                      }`}
-                    />
-
-                    <div>
-                      {/* Cabecera de la Card: Avatar, Nombre, Condición y Borrar */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Avatar Squircle */}
-                          <div
-                            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-black text-white shrink-0 shadow-md transition-transform group-hover:scale-105 ${
-                              isAdmin
-                                ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/30'
-                                : isPracticante
-                                  ? 'bg-gradient-to-br from-violet-500 to-indigo-600 shadow-violet-500/30'
-                                  : 'bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-fuchsia-500/30'
-                            }`}
-                          >
-                            {isAdmin ? (
-                              <Crown size={20} />
-                            ) : isPracticante ? (
-                              <GraduationCap size={20} />
-                            ) : (
-                              <Building2 size={20} />
-                            )}
-                          </div>
-
-                          {/* Nombre y Badges */}
-                          <div className="min-w-0">
-                            <h4 className="font-black text-sm sm:text-base text-[#0A1128] dark:text-white uppercase leading-tight truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                              {u.nombre}
-                            </h4>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                              {/* Condición */}
-                              <span
-                                className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                                  isPracticante
-                                    ? 'bg-violet-600 text-white shadow-xs'
-                                    : 'bg-gradient-to-r from-fuchsia-500 to-pink-600 text-white shadow-xs'
-                                }`}
-                              >
-                                {isPracticante ? 'Practicante' : 'Egresada'}
-                              </span>
-
-                              {/* Sello Oficial */}
-                              <span
-                                className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${
-                                  isVerificada
-                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/40'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700'
-                                }`}
-                              >
-                                <ShieldCheck size={10} className={isVerificada ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'} />
-                                <span>{isVerificada ? 'Verificada' : 'Pendiente'}</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Botón Eliminar Registro */}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteUser(u)}
-                          className="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition shrink-0"
-                          title="Eliminar miembro de la red"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-
-                      {/* Cuerpo de la Card: Centro, Sector y Contacto */}
-                      <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-                        {/* Centro Laboral */}
-                        <div className="flex items-start gap-2">
-                          <Building2 size={14} className="text-cyan-500 shrink-0 mt-0.5" />
-                          <div className="min-w-0">
-                            <span className="font-bold text-slate-800 dark:text-slate-200 block truncate leading-tight" title={u.centro}>
-                              {u.centro || 'Sin centro asignado'}
-                            </span>
-                            {u.sector && (
-                              <span className="inline-block mt-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">
-                                {u.sector}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Contacto Directo: WhatsApp & Correo */}
-                        <div className="space-y-1.5 pt-1">
-                          <a
-                            href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center justify-between transition group/btn"
-                            title="Abrir conversación de WhatsApp"
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <Phone size={13} className="text-emerald-600 dark:text-emerald-400" />
-                              <span>{u.telefono || 'Sin teléfono'}</span>
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                              WhatsApp <ExternalLink size={10} className="group-hover/btn:translate-x-0.5 transition-transform" />
-                            </span>
-                          </a>
-
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 px-1 truncate">
-                            <Mail size={12} className="shrink-0 text-slate-400" />
-                            <span className="truncate" title={u.correo}>{u.correo}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ------------------------------------------------------------ */}
-                    {/* Controles de Administración (1-Clic)                         */}
-                    {/* ------------------------------------------------------------ */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                        Controles de Administradora:
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {/* 1. Alternar Rol */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleUserRole(u)}
-                          className={`py-1.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition text-center truncate ${
-                            isAdmin
-                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400 hover:bg-amber-500/25'
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-cyan-500'
-                          }`}
-                          title="Clic para cambiar rol entre Admin y Colegiada"
-                        >
-                          {isAdmin ? '★ Admin' : 'Colegiada'}
-                        </button>
-
-                        {/* 2. Alternar Sello de Verificación */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleUserVerify(u)}
-                          className={`py-1.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition text-center truncate ${
-                            isVerificada
-                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400 hover:bg-emerald-500/25'
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
-                          }`}
-                          title="Clic para otorgar o retirar Sello Oficial"
-                        >
-                          {isVerificada ? '✓ Sellada' : 'Pendiente'}
-                        </button>
-
-                        {/* 3. Alternar Estado (Activa / Suspendida) */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleUserStatus(u)}
-                          className={`py-1.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition text-center truncate ${
-                            isActiva
-                              ? 'bg-emerald-500 text-[#050B18] border-emerald-400 font-black hover:bg-rose-500 hover:text-white hover:border-rose-500'
-                              : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
-                          }`}
-                          title="Clic para suspender o reactivar cuenta"
-                        >
-                          {isActiva ? '● Activa' : '✕ Pausa'}
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </motion.div>
-        ) : (
-          /* Estado Vacío */
-          <div className="py-12 px-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
-              <Search size={24} />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${currentFilterOption.badgeColor}`}>
+                <ActiveIcon size={15} />
+              </div>
+              <span className="truncate">{currentFilterOption.label}</span>
             </div>
-            <h4 className="font-black text-base text-[#0A1128] dark:text-white uppercase">
-              No se encontraron usuarias
-            </h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
-              No hay miembros registradas que coincidan con los filtros seleccionados o el término de búsqueda.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setUserSearchTerm('');
-                setUserFilterRole('todos');
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 rounded-xl bg-[#0A1128] dark:bg-cyan-500 text-white dark:text-[#050B18] text-xs font-black uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 transition"
-            >
-              Restablecer Filtros
-            </button>
-          </div>
-        )}
+            <ChevronDown
+              size={18}
+              className={`text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-200 shrink-0 ml-2 ${
+                isFilterOpen ? 'rotate-180 text-[#0A1128] dark:text-cyan-400' : ''
+              }`}
+            />
+          </button>
+
+          {isFilterOpen && (
+            <>
+              {/* Backdrop para cerrar al hacer clic afuera */}
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setIsFilterOpen(false)}
+              />
+              <div className="absolute left-0 right-0 sm:left-auto sm:right-0 top-full mt-2 sm:w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl shadow-slate-900/15 dark:shadow-black/60 p-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Filtrar por rol o condición
+                </div>
+
+                <div className="space-y-0.5">
+                  {USER_FILTER_OPTIONS.map((opt) => {
+                    const OptionIcon = opt.icon;
+                    const isSelected = userFilterRole === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => handleSelectFilter(opt.id)}
+                        className={`w-full p-2 rounded-xl text-left flex items-center justify-between transition ${
+                          isSelected
+                            ? 'bg-slate-100 dark:bg-slate-800 text-[#0A1128] dark:text-white font-bold'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${opt.badgeColor}`}>
+                            <OptionIcon size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold block truncate leading-tight">
+                              {opt.label}
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 block truncate">
+                              {opt.sublabel}
+                            </span>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <Check size={16} className={`shrink-0 ml-1.5 ${opt.activeColor}`} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 4. CONTENIDO: VISTA EN TABLA (SÓLO ESCRITORIO SI VIEWMODE ES TABLE) */}
+      {/* 3. VISTA EN CARDS (100% ESTÉTICO PARA CELULARES Y ESCRITORIO)       */}
       {/* ------------------------------------------------------------------ */}
-      {viewMode === 'table' && (
-        <div className="hidden sm:block rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-black tracking-wider border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="py-3 px-4">Colega</th>
-                  <th className="py-3 px-4">Centro & Sector</th>
-                  <th className="py-3 px-4">Contacto</th>
-                  <th className="py-3 px-4 text-center">Rol</th>
-                  <th className="py-3 px-4 text-center">Sello Oficial</th>
-                  <th className="py-3 px-4 text-center">Estado</th>
-                  <th className="py-3 px-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                {paginatedUsers.length > 0 ? (
-                  paginatedUsers.map((u) => {
-                    const isPracticante = u.condicion === 'practicante';
-                    return (
-                      <tr key={u.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
-                        {/* Colega */}
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 ${
-                              u.rol === 'admin'
-                                ? 'bg-amber-500 shadow-md shadow-amber-500/30'
-                                : isPracticante
-                                  ? 'bg-violet-600 shadow-md shadow-violet-600/30'
-                                  : 'bg-fuchsia-600 shadow-md shadow-fuchsia-600/30'
-                            }`}>
-                              {u.rol === 'admin' ? <Crown size={14} /> : (u.nombre?.charAt(0) || 'C')}
-                            </div>
-                            <div>
-                              <span className="font-black text-slate-900 dark:text-white block leading-tight">
-                                {u.nombre}
-                              </span>
-                              <span className={`inline-block text-[9px] font-bold uppercase mt-0.5 ${
-                                isPracticante ? 'text-violet-600 dark:text-violet-400' : 'text-fuchsia-600 dark:text-fuchsia-400'
-                              }`}>
-                                {isPracticante ? 'Practicante' : 'Egresada'}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
+      {filteredUsers.length > 0 ? (
+        <motion.div
+          layout
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
+        >
+          <AnimatePresence mode="popLayout">
+            {paginatedUsers.map((u) => {
+              const isPracticante = u.condicion === 'practicante';
+              const isAdmin = u.rol === 'admin';
+              const isActiva = u.estado === 'activa';
 
-                        {/* Centro & Sector */}
-                        <td className="py-3 px-4 max-w-[200px]">
-                          <span className="font-bold text-slate-800 dark:text-slate-200 block truncate" title={u.centro}>
+              return (
+                <motion.div
+                  key={u.id}
+                  layout
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.22 }}
+                  className="relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-400/80 dark:hover:border-cyan-500/80 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group overflow-hidden"
+                >
+                  {/* Barra Superior con Acento de Color Dinámico */}
+                  <div
+                    className={`absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r ${
+                      isAdmin
+                        ? 'from-amber-400 via-orange-500 to-amber-600'
+                        : isPracticante
+                          ? 'from-violet-500 via-indigo-500 to-cyan-400'
+                          : 'from-fuchsia-500 via-pink-500 to-rose-400'
+                    }`}
+                  />
+
+                  <div>
+                    {/* Cabecera: Avatar, Nombre, Condición y Eliminar */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Avatar Squircle */}
+                        <div
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-black text-white shrink-0 shadow-md transition-transform group-hover:scale-105 ${
+                            isAdmin
+                              ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/30'
+                              : isPracticante
+                                ? 'bg-gradient-to-br from-violet-500 to-indigo-600 shadow-violet-500/30'
+                                : 'bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-fuchsia-500/30'
+                          }`}
+                        >
+                          {isAdmin ? (
+                            <Crown size={20} />
+                          ) : isPracticante ? (
+                            <GraduationCap size={20} />
+                          ) : (
+                            <Building2 size={20} />
+                          )}
+                        </div>
+
+                        {/* Nombre y Badges */}
+                        <div className="min-w-0">
+                          <h4 className="font-black text-sm sm:text-base text-[#0A1128] dark:text-white uppercase leading-tight truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                            {u.nombre}
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            {/* Condición */}
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                                isPracticante
+                                  ? 'bg-violet-600 text-white shadow-xs'
+                                  : 'bg-gradient-to-r from-fuchsia-500 to-pink-600 text-white shadow-xs'
+                              }`}
+                            >
+                              {isPracticante ? 'Practicante' : 'Egresada'}
+                            </span>
+
+                            {/* Rol Badge */}
+                            {isAdmin && (
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/40">
+                                ★ Admin
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botón Eliminar Registro */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteUser(u)}
+                        className="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition shrink-0"
+                        title="Eliminar miembro de la red"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+
+                    {/* Cuerpo de la Card: Centro, Sector y Contacto */}
+                    <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                      {/* Centro Laboral */}
+                      <div className="flex items-start gap-2">
+                        <Building2 size={14} className="text-cyan-500 shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 block truncate leading-tight" title={u.centro}>
                             {u.centro || 'Sin centro asignado'}
                           </span>
                           {u.sector && (
-                            <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                            <span className="inline-block mt-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">
                               {u.sector}
                             </span>
                           )}
-                        </td>
+                        </div>
+                      </div>
 
-                        {/* Contacto */}
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <div className="space-y-0.5">
-                            <a
-                              href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1"
-                            >
-                              <Phone size={11} />
-                              <span>{u.telefono || 'Sin teléfono'}</span>
-                            </a>
-                            <span className="text-slate-500 dark:text-slate-400 text-[10.5px] block truncate max-w-[170px]" title={u.correo}>
-                              {u.correo}
-                            </span>
-                          </div>
-                        </td>
+                      {/* Contacto Directo: WhatsApp & Correo */}
+                      <div className="space-y-1.5 pt-1">
+                        <a
+                          href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center justify-between transition group/btn"
+                          title="Abrir conversación de WhatsApp"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Phone size={13} className="text-emerald-600 dark:text-emerald-400" />
+                            <span>{u.telefono || 'Sin teléfono'}</span>
+                          </span>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                            WhatsApp <ExternalLink size={10} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                          </span>
+                        </a>
 
-                        {/* Rol */}
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleUserRole(u)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border transition ${
-                              u.rol === 'admin'
-                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400 hover:bg-amber-500/25'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-cyan-500'
-                            }`}
-                            title="Clic para alternar rol"
-                          >
-                            {u.rol === 'admin' ? '★ Admin General' : 'Colegiada'}
-                          </button>
-                        </td>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 px-1 truncate">
+                          <Mail size={12} className="shrink-0 text-slate-400" />
+                          <span className="truncate" title={u.correo}>{u.correo}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                        {/* Sello Oficial */}
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleUserVerify(u)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border transition inline-flex items-center gap-1 ${
-                              u.verificada
-                                ? 'bg-amber-500 text-[#050B18] border-amber-400 shadow-xs'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-700'
-                            }`}
-                            title="Clic para cambiar estado de verificación"
-                          >
-                            <ShieldCheck size={11} className={u.verificada ? 'text-[#050B18]' : 'text-slate-400'} />
-                            <span>{u.verificada ? 'Verificada' : 'Pendiente'}</span>
-                          </button>
-                        </td>
+                  {/* ------------------------------------------------------------ */}
+                  {/* Controles de Administración (Sin botón de sello)             */}
+                  {/* ------------------------------------------------------------ */}
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Controles de Administradora:
+                    </div>
 
-                        {/* Estado */}
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleUserStatus(u)}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition ${
-                              u.estado === 'activa'
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-400'
-                                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-400'
-                            }`}
-                            title="Clic para suspender o reactivar cuenta"
-                          >
-                            {u.estado === 'activa' ? '● Activa' : '✕ Suspendida'}
-                          </button>
-                        </td>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* 1. Alternar Rol */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUserRole(u)}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition text-center truncate ${
+                          isAdmin
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400 hover:bg-amber-500/25'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-cyan-500'
+                        }`}
+                        title="Clic para cambiar rol entre Admin y Colegiada"
+                      >
+                        {isAdmin ? '★ Admin General' : 'Colegiada'}
+                      </button>
 
-                        {/* Acciones */}
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUser(u)}
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
-                            title="Eliminar registro"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400">
-                      No se encontraron usuarias con ese criterio de búsqueda.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      {/* 2. Alternar Estado (Activa / Suspendida) */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUserStatus(u)}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition text-center truncate ${
+                          isActiva
+                            ? 'bg-emerald-500 text-[#050B18] border-emerald-400 font-black hover:bg-rose-500 hover:text-white hover:border-rose-500'
+                            : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
+                        }`}
+                        title="Clic para suspender o reactivar cuenta"
+                      >
+                        {isActiva ? '● Activa' : '✕ Pausa'}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      ) : (
+        /* Estado Vacío */
+        <div className="py-12 px-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+            <Search size={24} />
           </div>
+          <h4 className="font-black text-base text-[#0A1128] dark:text-white uppercase">
+            No se encontraron usuarias
+          </h4>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
+            No hay miembros registradas que coincidan con los filtros seleccionados o el término de búsqueda.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setUserSearchTerm('');
+              setUserFilterRole('todos');
+              setCurrentPage(1);
+            }}
+            className="px-4 py-2 rounded-xl bg-[#0A1128] dark:bg-cyan-500 text-white dark:text-[#050B18] text-xs font-black uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 transition"
+          >
+            Restablecer Filtros
+          </button>
         </div>
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* 5. PAGINACIÓN MODERNA (IDÉNTICA A LA DEL DIRECTORIO)               */}
+      {/* 4. PAGINACIÓN MODERNA (IDÉNTICA A LA DEL DIRECTORIO)               */}
       {/* ------------------------------------------------------------------ */}
       {filteredUsers.length > itemsPerPage && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-3 pb-2 border-t border-slate-200 dark:border-slate-800">

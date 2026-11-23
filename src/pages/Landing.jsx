@@ -497,7 +497,7 @@ export default function Landing() {
   };
 
   const handleContactClick = (card) => {
-    const textoMensaje = `Hola ${card.nombre}, te escribo desde SISNETS (Red de Colegas de Trabajo Social) para coordinar apoyo profesional en: ${card.institucion}.`;
+    const textoMensaje = `Hola ${card.nombre}, te escribo desde SISNETS para coordinar apoyo profesional en: ${card.institucion}.`;
     window.open(
       `https://wa.me/${card.telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(textoMensaje)}`,
       '_blank'
