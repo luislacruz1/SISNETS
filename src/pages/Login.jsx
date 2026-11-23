@@ -432,7 +432,13 @@ export default function Login() {
             <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl mb-5">
               <button
                 type="button"
-                onClick={() => { setMode('login'); setError(null); }}
+                onClick={() => {
+                  setMode('login');
+                  setError(null);
+                  const remembered = localStorage.getItem('sisnets_remember_correo');
+                  setFormData({ nombreCompleto: '', tipoPerfil: 'Egresada', telefono: '', centroLaboral: '', areaApoyo: '', correo: remembered || '', password: '', remember: !!remembered });
+                  setPassStrength({ percent: 0, label: '', color: '' });
+                }}
                 className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all uppercase tracking-wider ${mode === 'login'
                   ? 'bg-white dark:bg-slate-900 text-[#0A1128] dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -442,7 +448,12 @@ export default function Login() {
               </button>
               <button
                 type="button"
-                onClick={() => { setMode('register'); setError(null); }}
+                onClick={() => {
+                  setMode('register');
+                  setError(null);
+                  setFormData({ nombreCompleto: '', tipoPerfil: 'Egresada', telefono: '', centroLaboral: '', areaApoyo: '', correo: '', password: '', remember: true });
+                  setPassStrength({ percent: 0, label: '', color: '' });
+                }}
                 className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all uppercase tracking-wider ${mode === 'register'
                   ? 'bg-white dark:bg-slate-900 text-[#0A1128] dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
