@@ -38,9 +38,23 @@ self.addEventListener('activate', (event) => {
 
 // Interceptor de peticiones
 self.addEventListener('fetch', (event) => {
-  // Ignorar peticiones que no sean GET o sean hacia servicios externos (Supabase, Google, etc.)
+  // Ignorar peticiones que no sean GET
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+
+  // Ignorar localhost y peticiones de desarrollo Vite para evitar bloqueos
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.includes('/src/') ||
+    url.pathname.includes('/node_modules/') ||
+    url.search.includes('t=')
+  ) {
+    return;
+  }
+
+  // Ignorar dominios externos
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(

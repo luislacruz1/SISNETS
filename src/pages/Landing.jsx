@@ -373,6 +373,12 @@ export default function Landing() {
     });
   };
 
+  const handleUpdateUser = (updatedData) => {
+    setRegisteredUsers((prev) =>
+      prev.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u))
+    );
+  };
+
   const handleExportCSV = () => {
     if (mentorCards.length === 0) {
       Swal.fire({
@@ -1127,6 +1133,7 @@ export default function Landing() {
                   handleToggleUserVerify={handleToggleUserVerify}
                   handleToggleUserStatus={handleToggleUserStatus}
                   handleDeleteUser={handleDeleteUser}
+                  handleUpdateUser={handleUpdateUser}
                 />
               )}
 
