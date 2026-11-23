@@ -6,8 +6,6 @@ import {
   Phone,
   Mail,
   Trash2,
-  Building2,
-  GraduationCap,
   Users,
   ChevronDown,
   Check,
@@ -292,9 +290,11 @@ export default function UsersManagement({
         >
           <AnimatePresence mode="popLayout">
             {paginatedUsers.map((u) => {
-              const isPracticante = u.condicion === 'practicante';
               const isAdmin = u.rol === 'admin';
-              const isActiva = u.estado === 'activa';
+              // Avatar real si existe y no es el logo genérico
+              const hasPhoto = u.avatar && u.avatar !== '/logo.png' && u.avatar !== '/logo.svg';
+              // Iniciales del nombre
+              const initials = (u.nombre || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
               return (
                 <motion.div
@@ -304,152 +304,98 @@ export default function UsersManagement({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.22 }}
-                  className="relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-400/80 dark:hover:border-cyan-500/80 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group overflow-hidden"
+                  className="relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-400/80 dark:hover:border-cyan-500/80 shadow-md hover:shadow-xl transition-all flex flex-col gap-3 group overflow-hidden"
                 >
-                  {/* Barra Superior con Acento de Color Dinámico */}
+                  {/* Barra Superior con Acento de Color */}
                   <div
                     className={`absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r ${
                       isAdmin
                         ? 'from-amber-400 via-orange-500 to-amber-600'
-                        : isPracticante
-                          ? 'from-violet-500 via-indigo-500 to-cyan-400'
-                          : 'from-fuchsia-500 via-pink-500 to-rose-400'
+                        : 'from-cyan-400 via-blue-500 to-indigo-500'
                     }`}
                   />
 
-                  <div>
-                    {/* Cabecera: Avatar, Nombre, Condición y Eliminar */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Avatar Squircle */}
+                  {/* Cabecera: Avatar, Nombre y Eliminar */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Avatar: foto real o iniciales */}
+                      {hasPhoto ? (
+                        <img
+                          src={u.avatar}
+                          alt={u.nombre}
+                          className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover shrink-0 shadow-md ring-2 ring-slate-200 dark:ring-slate-700 group-hover:ring-cyan-400 transition-all"
+                        />
+                      ) : (
                         <div
-                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-black text-white shrink-0 shadow-md transition-transform group-hover:scale-105 ${
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-black text-white text-sm shrink-0 shadow-md transition-transform group-hover:scale-105 ${
                             isAdmin
                               ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/30'
-                              : isPracticante
-                                ? 'bg-gradient-to-br from-violet-500 to-indigo-600 shadow-violet-500/30'
-                                : 'bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-fuchsia-500/30'
+                              : 'bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-500/30'
                           }`}
                         >
-                          {isAdmin ? (
-                            <Crown size={20} />
-                          ) : isPracticante ? (
-                            <GraduationCap size={20} />
-                          ) : (
-                            <Building2 size={20} />
-                          )}
+                          {isAdmin ? <Crown size={20} /> : initials}
                         </div>
+                      )}
 
-                        {/* Nombre y Badges */}
-                        <div className="min-w-0">
-                          <h4 className="font-black text-sm sm:text-base text-[#0A1128] dark:text-white uppercase leading-tight truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                            {u.nombre}
-                          </h4>
-                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                            {/* Condición */}
-                            <span
-                              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                                isPracticante
-                                  ? 'bg-violet-600 text-white shadow-xs'
-                                  : 'bg-gradient-to-r from-fuchsia-500 to-pink-600 text-white shadow-xs'
-                              }`}
-                            >
-                              {isPracticante ? 'Practicante' : 'Egresada'}
-                            </span>
-
-                            {/* Rol Badge */}
-                            {isAdmin && (
-                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/40">
-                                ★ Admin
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Botón Eliminar Registro */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteUser(u)}
-                        className="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition shrink-0"
-                        title="Eliminar miembro de la red"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-
-                    {/* Contacto Directo: WhatsApp & Correo Mejorado */}
-                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-                      {/* Botón WhatsApp Directo */}
-                      <a
-                        href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center justify-between transition group/btn"
-                        title="Abrir conversación de WhatsApp"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Phone size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span>{u.telefono || 'Sin teléfono'}</span>
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 shrink-0">
-                          WhatsApp <ExternalLink size={10} className="group-hover/btn:translate-x-0.5 transition-transform" />
-                        </span>
-                      </a>
-
-                      {/* Botón Correo Electrónico Mejorado */}
-                      <a
-                        href={`mailto:${u.correo}`}
-                        className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold flex items-center justify-between transition group/mail"
-                        title={`Enviar correo electrónico a ${u.correo}`}
-                      >
-                        <span className="flex items-center gap-2 min-w-0 truncate">
-                          <Mail size={13} className="text-cyan-600 dark:text-cyan-400 shrink-0" />
-                          <span className="truncate font-semibold text-[11.5px] text-slate-700 dark:text-slate-200">
-                            {u.correo}
+                      {/* Nombre + badge Admin si aplica */}
+                      <div className="min-w-0">
+                        <h4 className="font-black text-sm sm:text-base text-[#0A1128] dark:text-white uppercase leading-tight truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                          {u.nombre}
+                        </h4>
+                        {isAdmin && (
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/40">
+                            ★ Administradora
                           </span>
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-0.5 shrink-0 ml-1">
-                          Email <ExternalLink size={10} className="group-hover/mail:translate-x-0.5 transition-transform" />
-                        </span>
-                      </a>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Botón Eliminar */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUser(u)}
+                      className="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition shrink-0"
+                      title="Eliminar miembro de la red"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
 
-                  {/* ------------------------------------------------------------ */}
-                  {/* Controles de Administración                                  */}
-                  {/* ------------------------------------------------------------ */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {/* Contacto: WhatsApp & Correo */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    {/* WhatsApp */}
+                    <a
+                      href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold flex items-center justify-between transition group/btn"
+                      title="Abrir conversación de WhatsApp"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Phone size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>{u.telefono || 'Sin teléfono'}</span>
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 shrink-0">
+                        WhatsApp <ExternalLink size={10} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                      </span>
+                    </a>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* 1. Alternar Rol */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleUserRole(u)}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition text-center truncate ${
-                          isAdmin
-                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400 hover:bg-amber-500/25'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-cyan-500'
-                        }`}
-                        title="Clic para cambiar rol entre Admin y Colegiada"
-                      >
-                        {isAdmin ? '★ Admin General' : 'Colegiada'}
-                      </button>
-
-                      {/* 2. Alternar Estado (Activa / Suspendida) */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleUserStatus(u)}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition text-center truncate ${
-                          isActiva
-                            ? 'bg-emerald-500 text-[#050B18] border-emerald-400 font-black hover:bg-rose-500 hover:text-white hover:border-rose-500'
-                            : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
-                        }`}
-                        title="Clic para suspender o reactivar cuenta"
-                      >
-                        {isActiva ? '● Activa' : '✕ Pausa'}
-                      </button>
-                    </div>
+                    {/* Correo */}
+                    <a
+                      href={`mailto:${u.correo}`}
+                      className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 font-bold flex items-center justify-between transition group/mail"
+                      title={`Enviar correo a ${u.correo}`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0 truncate">
+                        <Mail size={13} className="text-cyan-600 dark:text-cyan-400 shrink-0" />
+                        <span className="truncate font-semibold text-[11.5px] text-slate-700 dark:text-slate-200">
+                          {u.correo}
+                        </span>
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-0.5 shrink-0 ml-1">
+                        Email <ExternalLink size={10} className="group-hover/mail:translate-x-0.5 transition-transform" />
+                      </span>
+                    </a>
                   </div>
                 </motion.div>
               );
