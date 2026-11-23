@@ -1,0 +1,33 @@
+{
+  "name": "SISNETS · Trabajo Social",
+  "short_name": "SISNETS",
+  "description": "Sistema de Networking Estratégico en Trabajo Social",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#0A1128",
+  "theme_color": "#0A1128",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["social", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -378,56 +378,48 @@ export default function UsersManagement({
                       </button>
                     </div>
 
-                    {/* Cuerpo de la Card: Centro, Sector y Contacto */}
-                    <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-                      {/* Centro Laboral */}
-                      <div className="flex items-start gap-2">
-                        <Building2 size={14} className="text-cyan-500 shrink-0 mt-0.5" />
-                        <div className="min-w-0">
-                          <span className="font-bold text-slate-800 dark:text-slate-200 block truncate leading-tight" title={u.centro}>
-                            {u.centro || 'Sin centro asignado'}
-                          </span>
-                          {u.sector && (
-                            <span className="inline-block mt-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">
-                              {u.sector}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    {/* Contacto Directo: WhatsApp & Correo Mejorado */}
+                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                      {/* Botón WhatsApp Directo */}
+                      <a
+                        href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center justify-between transition group/btn"
+                        title="Abrir conversación de WhatsApp"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Phone size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>{u.telefono || 'Sin teléfono'}</span>
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 shrink-0">
+                          WhatsApp <ExternalLink size={10} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                        </span>
+                      </a>
 
-                      {/* Contacto Directo: WhatsApp & Correo */}
-                      <div className="space-y-1.5 pt-1">
-                        <a
-                          href={`https://wa.me/${u.telefono?.replace(/[^0-9]/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center justify-between transition group/btn"
-                          title="Abrir conversación de WhatsApp"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Phone size={13} className="text-emerald-600 dark:text-emerald-400" />
-                            <span>{u.telefono || 'Sin teléfono'}</span>
+                      {/* Botón Correo Electrónico Mejorado */}
+                      <a
+                        href={`mailto:${u.correo}`}
+                        className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold flex items-center justify-between transition group/mail"
+                        title={`Enviar correo electrónico a ${u.correo}`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0 truncate">
+                          <Mail size={13} className="text-cyan-600 dark:text-cyan-400 shrink-0" />
+                          <span className="truncate font-semibold text-[11.5px] text-slate-700 dark:text-slate-200">
+                            {u.correo}
                           </span>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                            WhatsApp <ExternalLink size={10} className="group-hover/btn:translate-x-0.5 transition-transform" />
-                          </span>
-                        </a>
-
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 px-1 truncate">
-                          <Mail size={12} className="shrink-0 text-slate-400" />
-                          <span className="truncate" title={u.correo}>{u.correo}</span>
-                        </div>
-                      </div>
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-0.5 shrink-0 ml-1">
+                          Email <ExternalLink size={10} className="group-hover/mail:translate-x-0.5 transition-transform" />
+                        </span>
+                      </a>
                     </div>
                   </div>
 
                   {/* ------------------------------------------------------------ */}
-                  {/* Controles de Administración (Sin botón de sello)             */}
+                  {/* Controles de Administración                                  */}
                   {/* ------------------------------------------------------------ */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      Controles de Administradora:
-                    </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
 
                     <div className="grid grid-cols-2 gap-2">
                       {/* 1. Alternar Rol */}

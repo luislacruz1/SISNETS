@@ -93,7 +93,12 @@ export default function Landing() {
       const stored = localStorage.getItem('usuarios_colegio');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((u) => ({
+            ...u,
+            centro: u.centro && u.centro.includes('Red de Colegas') ? 'SISNETS (Sede Central)' : u.centro
+          }));
+        }
       }
     } catch (e) {
       console.error(e);
