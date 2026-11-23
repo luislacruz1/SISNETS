@@ -58,9 +58,14 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
     if (isOpen) {
       if (user) {
         setNombre(user.nombre || '');
+        if (user.telefono && user.telefono.trim() !== '') {
+          setTelefono(user.telefono);
+        } else {
+          setTelefono('+51 ');
+        }
+      } else {
+        setTelefono('+51 ');
       }
-      // Por defecto colocar +51 para poder completar el número (borrable si es de otro país)
-      setTelefono('+51 ');
     }
   }, [user, isOpen]);
 
@@ -157,7 +162,7 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
     onPublish(newCard);
 
     // Resetear formulario
-    setTelefono('+51 ');
+    setTelefono(user?.telefono && user.telefono.trim() !== '' ? user.telefono : '+51 ');
     setCentroLaboral('');
     setCentroPracticas('');
     setCargo('');
@@ -234,7 +239,9 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
             <div>
               <label className="flex items-center justify-between text-[11px] font-bold text-[#0A1128] dark:text-slate-300 uppercase tracking-wider mb-1">
                 <span>Número de WhatsApp</span>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Para enlace directo</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                  {user?.telefono && telefono === user.telefono ? '✨ Autocompletado' : 'Para enlace directo'}
+                </span>
               </label>
               <div className="relative">
                 <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-500" />

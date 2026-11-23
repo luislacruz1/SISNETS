@@ -8,7 +8,8 @@ import {
   Eye, 
   EyeOff, 
   ArrowRight,
-  X
+  X,
+  Phone
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -28,6 +29,7 @@ export default function AuthSection({ isOpen, onClose }) {
   // Form State
   const [formData, setFormData] = useState({
     nombreCompleto: '',
+    telefono: '',
     correo: '',
     password: '',
     remember: true
@@ -89,10 +91,35 @@ export default function AuthSection({ isOpen, onClose }) {
         cargo: isAdmin ? 'Administradora General' : 'Trabajadora Social',
         centro: 'SISNETS (Sede Central)',
         apoyo: 'Gestión institucional y convenios',
-        telefono: '+51 987 654 321',
+        telefono: mode === 'register' && formData.telefono.trim() ? formData.telefono.trim() : '+51 987 654 321',
         avatar: '/logo.png',
         metodo: 'Credenciales Directas'
       };
+
+      if (mode === 'register') {
+        try {
+          const rawUsers = localStorage.getItem('usuarios_colegio');
+          const usersList = rawUsers ? JSON.parse(rawUsers) : [];
+          const exists = usersList.some(u => u.correo?.toLowerCase() === loggedUser.correo?.toLowerCase());
+          if (!exists) {
+            usersList.unshift({
+              id: loggedUser.id,
+              nombre: loggedUser.nombre,
+              correo: loggedUser.correo,
+              telefono: loggedUser.telefono,
+              rol: loggedUser.rol,
+              condicion: 'egresada',
+              centro: loggedUser.centro,
+              sector: 'Comunitario / ONGs',
+              estado: 'activa',
+              fechaIngreso: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+            });
+            localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
 
       login(loggedUser);
       if (onClose) onClose();
@@ -251,24 +278,54 @@ export default function AuthSection({ isOpen, onClose }) {
             <form onSubmit={handleSubmit} className="space-y-3.5">
               
               {mode === 'register' && (
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Nombre Completo
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                      <User className="h-[18px] w-[18px] text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
+                <>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Nombre Completo
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <User className="h-[18px] w-[18px] text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. Lic. Mariana Gómez"
+                        value={formData.nombreCompleto}
+                        onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-cyan-500/15 focus:border-cyan-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. Lic. Mariana Gómez"
-                      value={formData.nombreCompleto}
-                      onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-cyan-500/15 focus:border-cyan-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm"
-                    />
                   </div>
-                </div>
+
+                  {/* Número de WhatsApp Profesional para Directorio */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        WhatsApp de Contacto Profesional
+                      </label>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        Directorio
+                      </span>
+                    </div>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Phone className="h-[18px] w-[18px] text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+51 987 654 321"
+                        value={formData.telefono}
+                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-emerald-500/15 focus:border-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm"
+                      />
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-tight">
+                      🔒 Se usará para enlazar tu botón de contacto cuando registres tu centro en el directorio.
+                    </p>
+                  </div>
+                </>
               )}
 
               {/* Correo Electrónico */}

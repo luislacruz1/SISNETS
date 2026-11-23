@@ -18,7 +18,8 @@ import {
   Users,
   Building2,
   HeartHandshake,
-  GraduationCap
+  GraduationCap,
+  Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
@@ -42,6 +43,7 @@ export default function Login() {
   const [formData, setFormData] = useState({
     nombreCompleto: '',
     tipoPerfil: 'Egresada', // 'Egresada' | 'Estudiante'
+    telefono: '',
     centroLaboral: '',
     areaApoyo: '',
     correo: '',
@@ -119,11 +121,37 @@ export default function Login() {
           : (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Ruth Anastacio'),
         correo: formData.correo,
         rol: isAdmin ? 'admin' : (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'Egresada'),
-        centro: 'SISNETS (Sede Central)',
-        apoyo: 'Gestión institucional y convenios',
+        centro: mode === 'register' && formData.centroLaboral ? formData.centroLaboral : 'SISNETS (Sede Central)',
+        apoyo: mode === 'register' && formData.areaApoyo ? formData.areaApoyo : 'Gestión institucional y convenios',
+        telefono: mode === 'register' && formData.telefono.trim() ? formData.telefono.trim() : '+51 987 654 321',
         avatar: '/logo.png',
         metodo: 'Credenciales Directas'
       };
+
+      if (mode === 'register') {
+        try {
+          const rawUsers = localStorage.getItem('usuarios_colegio');
+          const usersList = rawUsers ? JSON.parse(rawUsers) : [];
+          const exists = usersList.some(u => u.correo?.toLowerCase() === loggedUser.correo?.toLowerCase());
+          if (!exists) {
+            usersList.unshift({
+              id: loggedUser.id,
+              nombre: loggedUser.nombre,
+              correo: loggedUser.correo,
+              telefono: loggedUser.telefono,
+              rol: loggedUser.rol,
+              condicion: formData.tipoPerfil === 'Egresada' ? 'egresada' : 'practicante',
+              centro: loggedUser.centro,
+              sector: 'Comunitario / ONGs',
+              estado: 'activa',
+              fechaIngreso: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+            });
+            localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
 
       login(loggedUser);
 
@@ -472,6 +500,34 @@ export default function Login() {
                         className="w-full bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl py-3 pl-11 pr-4 focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 shadow-sm"
                       />
                     </div>
+                  </div>
+
+                  {/* Campo WhatsApp de Contacto Profesional */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="block text-[11px] font-bold text-[#0A1128] dark:text-slate-300 uppercase tracking-wider">
+                        WhatsApp de Contacto Profesional
+                      </label>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        Directorio
+                      </span>
+                    </div>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Phone className="h-[18px] w-[18px] text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+51 987 654 321"
+                        value={formData.telefono}
+                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                        className="w-full bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl py-3 pl-11 pr-4 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 shadow-sm"
+                      />
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 dark:text-slate-400 ml-1 leading-tight">
+                      🔒 Se usará para enlazar tu botón de contacto cuando registres tu centro en el directorio.
+                    </p>
                   </div>
 
                   {/* Campo Centro de Trabajo o Prácticas */}
