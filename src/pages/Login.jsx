@@ -114,6 +114,11 @@ export default function Login() {
       const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth');
       const isAdmin = isRuth || formData.correo.toLowerCase().includes('admin');
 
+      const rawTel = formData.telefono ? formData.telefono.replace(/[^0-9]/g, '') : '';
+      const formattedTel = rawTel 
+        ? `+51 ${rawTel.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3').trim()}` 
+        : '+51 987 654 321';
+
       const loggedUser = {
         id: isRuth ? 'admin_ruth' : (isAdmin ? 'admin_user' : ('ts_' + Date.now())),
         nombre: isRuth
@@ -123,7 +128,7 @@ export default function Login() {
         rol: isAdmin ? 'admin' : (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'Egresada'),
         centro: mode === 'register' && formData.centroLaboral ? formData.centroLaboral : 'SISNETS (Sede Central)',
         apoyo: mode === 'register' && formData.areaApoyo ? formData.areaApoyo : 'Gestión institucional y convenios',
-        telefono: mode === 'register' && formData.telefono.trim() ? formData.telefono.trim() : '+51 987 654 321',
+        telefono: mode === 'register' ? formattedTel : '+51 987 654 321',
         avatar: '/logo.png',
         metodo: 'Credenciales Directas'
       };
@@ -502,7 +507,7 @@ export default function Login() {
                     </div>
                   </div>
 
-                  {/* Campo WhatsApp de Contacto Profesional */}
+                  {/* Campo WhatsApp de Contacto Profesional con Bandera de Perú */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between ml-1">
                       <label className="block text-[11px] font-bold text-[#0A1128] dark:text-slate-300 uppercase tracking-wider">
@@ -512,17 +517,23 @@ export default function Login() {
                         Directorio
                       </span>
                     </div>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Phone className="h-[18px] w-[18px] text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                    <div className="flex rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 focus-within:ring-4 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all shadow-sm">
+                      <div className="flex items-center gap-1.5 px-3.5 py-3 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 select-none">
+                        <span className="text-base leading-none">🇵🇪</span>
+                        <span className="text-xs font-black text-slate-700 dark:text-slate-200 tracking-wide">+51</span>
                       </div>
                       <input
                         type="tel"
                         required
-                        placeholder="+51 987 654 321"
+                        maxLength={12}
+                        placeholder="987 654 321"
                         value={formData.telefono}
-                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                        className="w-full bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl py-3 pl-11 pr-4 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 shadow-sm"
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/^\+?51\s*/, '');
+                          val = val.replace(/[^0-9 ]/g, '');
+                          setFormData({ ...formData, telefono: val });
+                        }}
+                        className="w-full bg-transparent py-3 px-3.5 outline-none text-sm font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                       />
                     </div>
                     <p className="text-[10.5px] text-slate-500 dark:text-slate-400 ml-1 leading-tight">

@@ -42,7 +42,7 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
   // Estados del Formulario
   const [condicion, setCondicion] = useState('egresada'); // 'egresada' | 'practicante'
   const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('+51 ');
+  const [telefono, setTelefono] = useState('');
   const [centroLaboral, setCentroLaboral] = useState('');
   const [centroPracticas, setCentroPracticas] = useState('');
   const [cargo, setCargo] = useState('');
@@ -59,12 +59,13 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
       if (user) {
         setNombre(user.nombre || '');
         if (user.telefono && user.telefono.trim() !== '') {
-          setTelefono(user.telefono);
+          const clean = user.telefono.replace(/^\+?51\s*/, '').trim();
+          setTelefono(clean);
         } else {
-          setTelefono('+51 ');
+          setTelefono('');
         }
       } else {
-        setTelefono('+51 ');
+        setTelefono('');
       }
     }
   }, [user, isOpen]);
@@ -83,7 +84,7 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
     e.preventDefault();
 
     const cleanDigits = telefono.replace(/[^0-9]/g, '');
-    if (!nombre.trim() || !telefono.trim() || telefono.trim() === '+51' || cleanDigits.length < 6) {
+    if (!nombre.trim() || cleanDigits.length < 6) {
       Swal.fire({
         icon: 'warning',
         title: 'Número Incompleto',
@@ -92,6 +93,8 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
       });
       return;
     }
+
+    const formattedTelefono = `+51 ${cleanDigits.replace(/(\d{3})(\d{3})/, '$1 $2 ').trim()}`;
 
     const institucionFinal = condicion === 'egresada' ? centroLaboral.trim() : centroPracticas.trim();
     if (!institucionFinal) {
@@ -155,14 +158,15 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
       sector: 'General',
       apoyo: textoApoyoFinal,
       fortalezas: listaApoyo,
-      telefono: telefono.trim(),
+      telefono: formattedTelefono,
       correo: user?.correo || ''
     };
 
     onPublish(newCard);
 
     // Resetear formulario
-    setTelefono(user?.telefono && user.telefono.trim() !== '' ? user.telefono : '+51 ');
+    const userClean = user?.telefono ? user.telefono.replace(/^\+?51\s*/, '').trim() : '';
+    setTelefono(userClean);
     setCentroLaboral('');
     setCentroPracticas('');
     setCargo('');
@@ -240,24 +244,26 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
               <label className="flex items-center justify-between text-[11px] font-bold text-[#0A1128] dark:text-slate-300 uppercase tracking-wider mb-1">
                 <span>Número de WhatsApp</span>
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                  {user?.telefono && telefono === user.telefono ? '✨ Autocompletado' : 'Para enlace directo'}
+                  {user?.telefono && telefono.replace(/\s/g, '') === user.telefono.replace(/[^0-9]/g, '').replace(/^51/, '') ? '✨ Autocompletado' : 'Para enlace directo'}
                 </span>
               </label>
-              <div className="relative">
-                <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-500" />
+              <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-all">
+                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 select-none">
+                  <span className="text-base leading-none">🇵🇪</span>
+                  <span className="text-xs font-black text-slate-700 dark:text-slate-200 tracking-wide">+51</span>
+                </div>
                 <input
-                  type="text"
+                  type="tel"
                   required
+                  maxLength={12}
                   value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  onFocus={(e) => {
-                    if (e.target.value === '+51 ') {
-                      const len = e.target.value.length;
-                      e.target.setSelectionRange(len, len);
-                    }
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/^\+?51\s*/, '');
+                    val = val.replace(/[^0-9 ]/g, '');
+                    setTelefono(val);
                   }}
-                  placeholder="+51 987 654 321"
-                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="987 654 321"
+                  className="w-full px-3 py-2.5 bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
             </div>
