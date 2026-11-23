@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
+import WhatsAppFloatingButton from './components/common/WhatsAppFloatingButton';
 
 export default function App() {
   return (
@@ -17,6 +18,8 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          {/* Botón Flotante Oficial de WhatsApp para unirse al grupo */}
+          <WhatsAppFloatingButton />
         </Router>
       </AuthProvider>
     </ThemeProvider>
