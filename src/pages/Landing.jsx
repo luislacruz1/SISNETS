@@ -803,10 +803,10 @@ export default function Landing() {
                     <button
                       type="button"
                       onClick={() => setIsPublishModalOpen(true)}
-                      className="bg-[#0A1128] hover:bg-[#131f42] text-white px-5 py-3 rounded-xl shadow-lg active:scale-95 transition-all text-sm font-semibold flex items-center gap-2"
-                      title="Registrar Directorio"
+                      className="bg-[#0A1128] hover:bg-[#131f42] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2"
+                      title={adminTab === 'usuarios' ? 'Registrar Colegiada' : 'Registrar Directorio'}
                     >
-                      <Plus size={18} /> Registrar Directorio
+                      <Plus size={18} /> {adminTab === 'usuarios' ? 'Registrar Colegiada' : 'Registrar Directorio'}
                     </button>
                   </div>
                 </div>
@@ -1116,6 +1116,7 @@ export default function Landing() {
                   userFilterRole={userFilterRole}
                   setUserFilterRole={setUserFilterRole}
                   filteredUsers={filteredUsers}
+                  registeredUsers={registeredUsers}
                   handleExportUsersCSV={handleExportUsersCSV}
                   handleToggleUserRole={handleToggleUserRole}
                   handleToggleUserVerify={handleToggleUserVerify}
