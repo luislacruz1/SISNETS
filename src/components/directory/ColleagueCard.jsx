@@ -181,11 +181,11 @@ export default function ColleagueCard({
           <Sparkles size={13} className="text-cyan-500 shrink-0 animate-pulse" />
           <span>En qué te puede orientar y apoyar:</span>
         </div>
-        <div className="h-[125px] sm:h-[156px] overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+        <div className="max-h-[160px] overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
           {fortalezasList.map((f, i) => (
             <div
               key={i}
-              className="flex items-start gap-2 text-[10.5px] sm:text-[11px] font-bold bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 p-2 sm:p-2.5 rounded-xl border border-cyan-500/30 shadow-2xs leading-snug hover:border-cyan-400 hover:bg-cyan-50/50 dark:hover:bg-slate-800 hover:translate-x-1.5 transition-all duration-200 cursor-default"
+              className="flex items-start gap-2 text-[10.5px] sm:text-[11px] font-bold bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 p-2 sm:p-2.5 rounded-xl border border-cyan-500/30 shadow-2xs leading-snug hover:border-cyan-400 hover:bg-cyan-50/50 dark:hover:bg-slate-800/95 transition-colors duration-150 cursor-default"
             >
               <CheckCircle2 size={14} className="text-cyan-500 shrink-0 mt-0.5 group-hover:text-cyan-400 transition-colors" />
               <span className="line-clamp-2">{f}</span>
