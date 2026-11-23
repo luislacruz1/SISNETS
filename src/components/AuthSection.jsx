@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Lock,
@@ -12,6 +12,7 @@ import {
   Phone
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Swal from 'sweetalert2';
 
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +36,33 @@ export default function AuthSection({ isOpen, onClose }) {
     password: '',
     remember: true
   });
+
+  // Cargar correo recordado si existe
+  useEffect(() => {
+    const remembered = localStorage.getItem('sisnets_remember_correo');
+    if (remembered) {
+      setFormData((prev) => ({ ...prev, correo: remembered, remember: true }));
+    }
+  }, []);
+
+  const handleForgotPassword = () => {
+    Swal.fire({
+      icon: 'info',
+      title: 'Recuperar Contraseña',
+      html: `
+        <div class="text-left text-xs text-slate-600 dark:text-slate-300 space-y-2.5">
+          <p>Por motivos de seguridad institucional en <strong>SISNETS</strong>, comunícate con la administración para validar tu colegiatura/prácticas y restablecer tu clave:</p>
+          <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl space-y-1 text-slate-700 dark:text-slate-200 font-semibold">
+            <p>📧 <strong>Correo:</strong> soporte@trabajosocial.org</p>
+            <p>📱 <strong>WhatsApp Red:</strong> +51 987 654 321</p>
+          </div>
+          <p class="text-[10.5px] text-slate-400">Atención inmediata a colegas y estudiantes acreditadas.</p>
+        </div>
+      `,
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#0A1128'
+    });
+  };
 
   const [passStrength, setPassStrength] = useState({ percent: 0, label: '', color: '' });
 
@@ -125,6 +153,12 @@ export default function AuthSection({ isOpen, onClose }) {
         } catch (e) {
           console.error(e);
         }
+      }
+
+      if (formData.remember && formData.correo) {
+        localStorage.setItem('sisnets_remember_correo', formData.correo);
+      } else if (!formData.remember) {
+        localStorage.removeItem('sisnets_remember_correo');
       }
 
       login(loggedUser);
@@ -406,6 +440,30 @@ export default function AuthSection({ isOpen, onClose }) {
                   </div>
                 )}
               </div>
+
+              {/* Fila Recordar datos y Olvidé contraseña en Iniciar Sesión */}
+              {mode === 'login' && (
+                <div className="flex items-center justify-between pt-0.5 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600 dark:text-slate-400 font-semibold group">
+                    <input
+                      type="checkbox"
+                      checked={formData.remember}
+                      onChange={(e) => setFormData({ ...formData, remember: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-cyan-600 focus:ring-cyan-500/20 dark:bg-slate-800 transition cursor-pointer"
+                    />
+                    <span className="group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
+                      Recordar datos
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-[11.5px] font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 hover:underline transition-colors"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+              )}
 
               {/* Botón Principal Gradient SISNETS */}
               <div className="pt-2">

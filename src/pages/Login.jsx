@@ -52,6 +52,14 @@ export default function Login() {
     remember: true
   });
 
+  // Cargar correo recordado si existe
+  useEffect(() => {
+    const remembered = localStorage.getItem('sisnets_remember_correo');
+    if (remembered) {
+      setFormData((prev) => ({ ...prev, correo: remembered, remember: true }));
+    }
+  }, []);
+
   // Strength password state for registration
   const [passStrength, setPassStrength] = useState({ percent: 0, label: '', color: '' });
 
@@ -157,6 +165,12 @@ export default function Login() {
         } catch (e) {
           console.error(e);
         }
+      }
+
+      if (formData.remember && formData.correo) {
+        localStorage.setItem('sisnets_remember_correo', formData.correo);
+      } else if (!formData.remember) {
+        localStorage.removeItem('sisnets_remember_correo');
       }
 
       login(loggedUser);
@@ -653,25 +667,27 @@ export default function Login() {
                 )}
               </div>
 
-              {/* Fila de Olvido de Contraseña y Recordarme */}
+              {/* Fila Recordar datos y Olvidé contraseña en Iniciar Sesión */}
               {mode === 'login' && (
                 <div className="flex items-center justify-between pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 dark:text-slate-400 select-none group">
                     <input
                       type="checkbox"
                       checked={formData.remember}
                       onChange={(e) => setFormData({ ...formData, remember: e.target.checked })}
-                      className="rounded border-slate-300 text-[#0A1128] focus:ring-[#0A1128]"
+                      className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500/20 cursor-pointer"
                     />
-                    <span>Recordarme</span>
+                    <span className="group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
+                      Recordar datos
+                    </span>
                   </label>
-                  <a
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setShowForgotModal(true); }}
-                    className="text-[12px] font-bold text-[#0A1128] dark:text-cyan-400 hover:text-[#12183d] dark:hover:text-cyan-300 transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-[12px] font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
                   >
-                    ¿Olvidó su contraseña?
-                  </a>
+                    ¿Olvidaste tu contraseña?
+                  </button>
                 </div>
               )}
 
