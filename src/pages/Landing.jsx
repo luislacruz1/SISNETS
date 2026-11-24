@@ -27,6 +27,7 @@ import { useAuth } from '../context/AuthContext';
 import AuthSection from '../components/AuthSection';
 import PublishSupportModal from '../components/PublishSupportModal';
 import CreateUserModal from '../components/admin/CreateUserModal';
+import ChangePasswordModal from '../components/common/ChangePasswordModal';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import ColleagueCard from '../components/directory/ColleagueCard';
@@ -114,7 +115,14 @@ export default function Landing() {
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (user?.debeCambiarPassword) {
+      setIsChangePassModalOpen(true);
+    }
+  }, [user]);
 
   // Control del Panel de Navegación persistente en recarga (F5)
   const [adminTab, setAdminTabState] = useState(() => {
@@ -870,6 +878,7 @@ export default function Landing() {
             user={user}
             mentorCards={mentorCards}
             handleLogout={handleLogout}
+            onOpenChangePassword={() => setIsChangePassModalOpen(true)}
             handleExportCSV={handleExportCSV}
             handleExportUsersCSV={handleExportUsersCSV}
             handleClearAllCards={handleClearAllCards}
@@ -1340,6 +1349,20 @@ export default function Landing() {
           saveRemoteUser(newUser);
         }}
         existingUsers={registeredUsers}
+      />
+
+      {/* MODAL PARA CAMBIO DE CONTRASEÑA SEGURO (SHA-256) */}
+      <ChangePasswordModal
+        isOpen={isChangePassModalOpen}
+        onClose={() => setIsChangePassModalOpen(false)}
+        onSuccess={() => {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Contraseña Actualizada!',
+            text: 'Tu contraseña ha sido cifrada y guardada con éxito en la nube.',
+            confirmButtonColor: '#0A1128'
+          });
+        }}
       />
 
     </div>

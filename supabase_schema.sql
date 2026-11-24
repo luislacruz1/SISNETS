@@ -116,8 +116,14 @@ CREATE POLICY "Permitir todo en directorio"
 ON public.directorio_colegas FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- ------------------------------------------------------------------------------
--- 7. REPLICACIÓN EN TIEMPO REAL
+-- 7. REPLICACIÓN EN TIEMPO REAL (WEBSOCKETS DE ALTA DISPONIBILIDAD)
+-- Configuración idéntica al estándar reactivo de SIMEC (Mantenimiento de Equipos)
 -- ------------------------------------------------------------------------------
+-- A. Habilitar REPLICA IDENTITY FULL para que UPDATE y DELETE transmitan la fila completa
+ALTER TABLE public.usuarios REPLICA IDENTITY FULL;
+ALTER TABLE public.directorio_colegas REPLICA IDENTITY FULL;
+
+-- B. Publicar en el canal oficial supabase_realtime
 DO $$
 BEGIN
   IF NOT EXISTS (

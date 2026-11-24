@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { ADMIN_RUTH_USER, LUIS_LACRUZ_USER } from '../data/demoData';
+import { hashPassword, sanitizeEmail } from '../utils/security';
 
 // IDs de prueba antiguos que no deben aparecer nunca
 const FAKE_DEMO_IDS = [
@@ -127,12 +128,24 @@ export const fetchRemoteUsers = async () => {
 export const saveRemoteUser = async (user) => {
   if (!user || !user.correo) return false;
 
+  const cleanEmail = sanitizeEmail(user.correo);
+  let finalPassword = user.password || '';
+
+  // Encriptación criptográfica SHA-256 (Inspirada en el modelo de seguridad SIMEC)
+  if (finalPassword && finalPassword.length < 60) {
+    try {
+      finalPassword = await hashPassword(finalPassword);
+    } catch (e) {
+      console.warn('Error encriptando contraseña:', e);
+    }
+  }
+
   const payload = {
     id: String(user.id || `usr_${Date.now()}`),
     nombre: user.nombre || '',
-    correo: user.correo.toLowerCase(),
+    correo: cleanEmail,
     telefono: user.telefono || '',
-    password: user.password || '',
+    password: finalPassword,
     debeCambiarPassword: !!user.debeCambiarPassword,
     rol: user.rol || 'colegiada',
     condicion: user.condicion || 'egresada',
@@ -160,9 +173,17 @@ export const saveRemoteUser = async (user) => {
 export const updateRemoteUser = async (userId, partialData) => {
   if (!userId) return false;
   try {
+    const sanitizedData = { ...partialData };
+    if (sanitizedData.correo) {
+      sanitizedData.correo = sanitizeEmail(sanitizedData.correo);
+    }
+    if (sanitizedData.password && sanitizedData.password.length < 60) {
+      sanitizedData.password = await hashPassword(sanitizedData.password);
+    }
+
     const { error } = await supabase
       .from('usuarios')
-      .update(partialData)
+      .update(sanitizedData)
       .eq('id', String(userId));
     if (error) {
       console.warn('Error actualizando usuario en Supabase:', error.message);

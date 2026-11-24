@@ -30,6 +30,7 @@ import DynamicNetworkCanvas from '../components/DynamicNetworkCanvas';
 import PeruFlag from '../components/common/PeruFlag';
 import { supabase } from '../lib/supabaseClient';
 import { saveRemoteUser } from '../lib/dataSyncService';
+import { hashPassword, verifyPassword, sanitizeEmail } from '../utils/security';
 
 export default function Login() {
   const { user, login, logout } = useAuth();
@@ -169,7 +170,7 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
-    const cleanCorreo = (formData.correo || '').trim().toLowerCase();
+    const cleanCorreo = sanitizeEmail(formData.correo);
 
     try {
       // Simulación de latencia de API (Backend SISGEIN)
@@ -184,15 +185,20 @@ export default function Login() {
         console.error(err);
       }
 
-      const isRuth = cleanCorreo === 'ruthanastacio191202@gmail.com' || cleanCorreo.includes('ruthanastacio') || cleanCorreo.includes('ruth');
+      const isRuth = cleanCorreo === 'ruthanastacio191202@gmail.com' || cleanCorreo.includes('ruthanastacio');
       const isLuis = cleanCorreo === 'luislacruz326@gmail.com' || cleanCorreo.includes('luislacruz');
-      const isAdmin = isRuth || isLuis || cleanCorreo.includes('admin');
 
       // 1. VALIDACIÓN EN MODO REGISTRO
       if (mode === 'register') {
         const cleanNombre = (formData.nombreCompleto || '').trim();
         if (!cleanNombre) {
           setError('Por favor ingresa tu nombre completo.');
+          setLoading(false);
+          return;
+        }
+
+        if (!formData.password || formData.password.length < 6) {
+          setError('La contraseña debe tener al menos 6 caracteres.');
           setLoading(false);
           return;
         }
@@ -217,11 +223,16 @@ export default function Login() {
           ? `+51 ${rawTel.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3').trim()}` 
           : '+51 987 654 321';
 
+        // Cifrado criptográfico SHA-256 de la contraseña (estándar SIMEC)
+        const passwordHash = await hashPassword(formData.password);
+
         const newUser = {
           id: `usr_${Date.now()}`,
           nombre: cleanNombre,
           correo: cleanCorreo,
           telefono: formattedTel,
+          password: passwordHash,
+          debeCambiarPassword: false,
           rol: 'colegiada',
           condicion: formData.tipoPerfil === 'Estudiante' ? 'practicante' : 'egresada',
           centro: formData.centroLaboral?.trim() || 'SISNETS (Comunidad)',
@@ -246,7 +257,7 @@ export default function Login() {
         Swal.fire({
           icon: 'success',
           title: '¡Registro Exitoso!',
-          text: `Bienvenida a SISNETS, ${newUser.nombre}. Tu cuenta ha sido creada exitosamente.`,
+          text: `Bienvenida a SISNETS, ${newUser.nombre}. Tu cuenta ha sido cifrada y creada exitosamente.`,
           confirmButtonColor: '#0A1128',
           background: isDarkMode ? '#0F172A' : '#FFFFFF',
           color: isDarkMode ? '#F8FAFC' : '#0F172A',
@@ -260,10 +271,27 @@ export default function Login() {
         return;
       }
 
-      // 2. MODO INICIO DE SESIÓN
+      // 2. MODO INICIO DE SESIÓN CON VERIFICACIÓN CRIPTOGRÁFICA
       let targetUser = usersList.find((u) => u.correo && u.correo.toLowerCase() === cleanCorreo);
 
-      if (isRuth) {
+      // Si no está en local, consultar en Supabase
+      if (!targetUser) {
+        try {
+          const { data: dbUser } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('correo', cleanCorreo)
+            .maybeSingle();
+          if (dbUser) {
+            targetUser = dbUser;
+          }
+        } catch (err) {
+          console.warn('Consulta en Supabase:', err);
+        }
+      }
+
+      // Cuentas fundadoras oficiales
+      if (!targetUser && isRuth) {
         targetUser = {
           id: 'admin_ruth',
           nombre: 'Ruth Anastacio',
@@ -278,13 +306,7 @@ export default function Login() {
           avatar: '/logo.png',
           metodo: 'Credenciales Directas'
         };
-
-        // Asegurar que Ruth esté en usuarios_colegio
-        if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'ruthanastacio191202@gmail.com')) {
-          usersList.unshift(targetUser);
-          localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
-        }
-      } else if (isLuis) {
+      } else if (!targetUser && isLuis) {
         targetUser = {
           id: 'usr_luis_lacruz',
           nombre: 'Luis Jhonatan La Cruz Urbano',
@@ -299,28 +321,53 @@ export default function Login() {
           avatar: '/logo.png',
           metodo: 'Credenciales Directas'
         };
+      }
 
-        // Asegurar que Luis esté en usuarios_colegio
-        if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'luislacruz326@gmail.com')) {
-          usersList.unshift(targetUser);
-          localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
-        }
-      } else if (!targetUser) {
-        targetUser = {
-          id: `usr_${Date.now()}`,
-          nombre: cleanCorreo.split('@')[0],
-          correo: cleanCorreo,
-          rol: isAdmin ? 'admin' : 'colegiada',
-          condicion: 'egresada',
-          centro: 'SISNETS (Comunidad)',
-          sector: 'Comunitario / ONGs',
-          telefono: '+51 987 654 321',
-          estado: 'activa',
-          verificada: true,
-          avatar: '/logo.png',
-          metodo: 'Credenciales Directas',
-          fechaRegistro: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        };
+      if (!targetUser) {
+        setError('No existe ninguna cuenta registrada con este correo electrónico.');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Usuario No Encontrado',
+          text: `No encontramos una cuenta con "${cleanCorreo}". Por favor regístrate si es tu primera vez.`,
+          confirmButtonColor: '#0A1128'
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Comprobación Criptográfica de Contraseña (SHA-256)
+      let isPasswordCorrect = false;
+      const allowedDefaultAdminPass = [
+        'VocacionSocial2026!',
+        'RuthAnastacio2026!',
+        'LuisLaCruz2026!',
+        'Admin2026!',
+        'Colegiada2026!'
+      ];
+
+      if (targetUser.password) {
+        isPasswordCorrect = await verifyPassword(formData.password, targetUser.password);
+      } else if (allowedDefaultAdminPass.includes(formData.password)) {
+        isPasswordCorrect = true;
+        // Cifrar con SHA-256 para el futuro
+        targetUser.password = await hashPassword(formData.password);
+        saveRemoteUser(targetUser);
+      }
+
+      if (!isPasswordCorrect) {
+        setError('Contraseña incorrecta. Por favor verifica tus credenciales.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Credenciales Incorrectas',
+          text: 'La contraseña ingresada no coincide con nuestros registros seguros.',
+          confirmButtonColor: '#0A1128'
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Asegurar que el usuario esté en usuarios_colegio
+      if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === cleanCorreo)) {
         usersList.unshift(targetUser);
         localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
       }
@@ -331,7 +378,6 @@ export default function Login() {
         localStorage.removeItem('sisnets_remember_correo');
       }
 
-      saveRemoteUser(targetUser);
       login(targetUser);
       window.dispatchEvent(new Event('sisnets_users_updated'));
 
