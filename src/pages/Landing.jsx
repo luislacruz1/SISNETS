@@ -35,6 +35,7 @@ import MetricsView from '../components/admin/MetricsView';
 import PublicLanding from '../components/public/PublicLanding';
 import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER, LUIS_LACRUZ_USER } from '../data/demoData';
 import { isMasculineName } from '../utils/genderHelper';
+import { supabase } from '../lib/supabaseClient';
 
 // Opciones del filtro desplegable moderno por condición
 const FILTER_OPTIONS = [
@@ -287,11 +288,12 @@ export default function Landing() {
     }
   }, [mentorCards]);
 
-  // Función de sincronización del Directorio (Manual o en Segundo Plano)
-  const syncDirectorio = (isBackground = false) => {
+  // Función de sincronización del Directorio y Usuarios (Local + Supabase Cloud)
+  const syncDirectorio = async (isBackground = false) => {
     try {
       if (!isBackground) setIsRefreshing(true);
 
+      // 1. Sincronización instantánea desde localStorage (Caché local ultra-rápida)
       const stored = localStorage.getItem('directorio_colegas');
       if (stored) {
         const parsed = JSON.parse(stored);
@@ -306,7 +308,6 @@ export default function Landing() {
         }
       }
 
-      // Sincronizar también usuarias registradas si hay cambios
       const storedUsers = localStorage.getItem('usuarios_colegio');
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
@@ -318,6 +319,36 @@ export default function Landing() {
           return prev;
         });
       }
+
+      // 2. SINCRONIZACIÓN EN LA NUBE (SUPABASE)
+      try {
+        const [cardsRes, usersRes] = await Promise.all([
+          supabase.from('directorio_colegas').select('*').order('created_at', { ascending: false }),
+          supabase.from('usuarios').select('*')
+        ]);
+
+        if (cardsRes.data && Array.isArray(cardsRes.data) && cardsRes.data.length > 0) {
+          const cleanCloudCards = cardsRes.data.filter((c) => c && !c.id?.startsWith('demo_'));
+          setMentorCards(cleanCloudCards);
+          try {
+            localStorage.setItem('directorio_colegas', JSON.stringify(cleanCloudCards));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        if (usersRes.data && Array.isArray(usersRes.data) && usersRes.data.length > 0) {
+          const mergedCloudUsers = cleanAndMergeUsers(usersRes.data);
+          setRegisteredUsers(mergedCloudUsers);
+          try {
+            localStorage.setItem('usuarios_colegio', JSON.stringify(mergedCloudUsers));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      } catch (cloudErr) {
+        console.warn('Sincronización en la nube en espera:', cloudErr);
+      }
     } catch (e) {
       console.error('Error sincronizando en Short Polling:', e);
     } finally {
@@ -327,9 +358,12 @@ export default function Landing() {
     }
   };
 
-  // SHORT POLLING CADA 20 SEGUNDOS (Estilo SISGEIN)
+  // SHORT POLLING CADA 20 SEGUNDOS (Estilo SISGEIN + Sincronización Cloud)
   useEffect(() => {
-    // 1. Sincronización instantánea ante eventos entre pestañas/ventanas del navegador y eventos locales
+    // Sincronización inicial con la nube
+    syncDirectorio(true);
+
+    // 1. Sincronización ante eventos locales y cambios de pestaña
     const handleStorageChange = (e) => {
       if (e.key === 'directorio_colegas' || e.key === 'usuarios_colegio') {
         syncDirectorio(true);
@@ -339,8 +373,9 @@ export default function Landing() {
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('sisnets_directorio_updated', handleDirectorioEvent);
+    window.addEventListener('focus', handleDirectorioEvent);
 
-    // 2. Reloj maestro de Short Polling: ciclo cada 20 segundos (20000 ms)
+    // 2. Reloj maestro de Short Polling: ciclo cada 20 segundos
     const pollingInterval = setInterval(() => {
       syncDirectorio(true);
     }, 20000);
@@ -348,6 +383,7 @@ export default function Landing() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('sisnets_directorio_updated', handleDirectorioEvent);
+      window.removeEventListener('focus', handleDirectorioEvent);
       clearInterval(pollingInterval);
     };
   }, []);
@@ -361,7 +397,7 @@ export default function Landing() {
     setCurrentPage(1);
   }, [searchTerm, selectedFilter, itemsPerPage]);
 
-  const handleAddNewSupport = (newCard) => {
+  const handleAddNewSupport = async (newCard) => {
     const cardWithStatus = {
       ...newCard,
       verificada: user?.rol === 'admin' ? true : !!newCard.verificada
@@ -379,8 +415,9 @@ export default function Landing() {
 
     // 2. Sincronizar en lista de usuarias registradas
     const exists = registeredUsers.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
+    let newUserFromCard = null;
     if (!exists) {
-      const newUserFromCard = {
+      newUserFromCard = {
         id: 'usr_' + Date.now(),
         nombre: cardWithStatus.nombre,
         correo: cardWithStatus.correo || `usuario_${Date.now()}@sisnets.pe`,
@@ -402,6 +439,16 @@ export default function Landing() {
       }
     }
 
+    // 3. Sincronización en la Nube con Supabase
+    try {
+      await supabase.from('directorio_colegas').upsert([cardWithStatus]);
+      if (newUserFromCard) {
+        await supabase.from('usuarios').upsert([newUserFromCard]);
+      }
+    } catch (err) {
+      console.warn('Guardado en la nube en segundo plano:', err);
+    }
+
     Swal.fire({
       icon: 'success',
       title: '¡Centro Publicado en la Red!',
@@ -412,11 +459,42 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserRole = (targetUser) => {
+  const handleCreateUser = async (newUser) => {
+    const ruth = registeredUsers.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
+    const luis = registeredUsers.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
+    const others = registeredUsers.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
+    const updated = [ruth, luis, newUser, ...others];
+    setRegisteredUsers(updated);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
+    } catch (err) {
+      console.error(err);
+    }
+
+    // Guardar en Supabase en la nube
+    try {
+      await supabase.from('usuarios').upsert([newUser]);
+    } catch (err) {
+      console.warn('Error guardando usuario en Supabase:', err);
+    }
+  };
+
+  const handleToggleUserRole = async (targetUser) => {
     const nuevoRol = targetUser.rol === 'admin' ? 'colegiada' : 'admin';
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === targetUser.id ? { ...u, rol: nuevoRol } : u))
-    );
+    const updatedUsers = registeredUsers.map((u) => (u.id === targetUser.id ? { ...u, rol: nuevoRol } : u));
+    setRegisteredUsers(updatedUsers);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.error(e);
+    }
+
+    try {
+      await supabase.from('usuarios').update({ rol: nuevoRol }).eq('id', targetUser.id);
+    } catch (err) {
+      console.warn('Error actualizando rol en Supabase:', err);
+    }
+
     Swal.fire({
       icon: 'success',
       title: 'Rol Actualizado',
@@ -429,11 +507,22 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserStatus = (targetUser) => {
+  const handleToggleUserStatus = async (targetUser) => {
     const nuevoEstado = targetUser.estado === 'activa' ? 'suspendida' : 'activa';
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === targetUser.id ? { ...u, estado: nuevoEstado } : u))
-    );
+    const updatedUsers = registeredUsers.map((u) => (u.id === targetUser.id ? { ...u, estado: nuevoEstado } : u));
+    setRegisteredUsers(updatedUsers);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.error(e);
+    }
+
+    try {
+      await supabase.from('usuarios').update({ estado: nuevoEstado }).eq('id', targetUser.id);
+    } catch (err) {
+      console.warn('Error actualizando estado en Supabase:', err);
+    }
+
     Swal.fire({
       icon: nuevoEstado === 'activa' ? 'success' : 'warning',
       title: nuevoEstado === 'activa' ? 'Cuenta Reactivada' : 'Cuenta Suspendida',
@@ -446,19 +535,38 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserVerify = (targetUser) => {
+  const handleToggleUserVerify = async (targetUser) => {
     const nuevoEstado = !targetUser.verificada;
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === targetUser.id ? { ...u, verificada: nuevoEstado } : u))
-    );
-    setMentorCards((prev) =>
-      prev.map((c) => {
-        if (c.correo?.toLowerCase() === targetUser.correo?.toLowerCase() || c.nombre === targetUser.nombre) {
-          return { ...c, verificada: nuevoEstado };
-        }
-        return c;
-      })
-    );
+    const updatedUsers = registeredUsers.map((u) => (u.id === targetUser.id ? { ...u, verificada: nuevoEstado } : u));
+    setRegisteredUsers(updatedUsers);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedCards = mentorCards.map((c) => {
+      if (c.correo?.toLowerCase() === targetUser.correo?.toLowerCase() || c.nombre === targetUser.nombre) {
+        return { ...c, verificada: nuevoEstado };
+      }
+      return c;
+    });
+    setMentorCards(updatedCards);
+    try {
+      localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
+    } catch (e) {
+      console.error(e);
+    }
+
+    try {
+      await Promise.all([
+        supabase.from('usuarios').update({ verificada: nuevoEstado }).eq('id', targetUser.id),
+        supabase.from('directorio_colegas').update({ verificada: nuevoEstado }).eq('correo', targetUser.correo)
+      ]);
+    } catch (err) {
+      console.warn('Error actualizando verificacion en Supabase:', err);
+    }
+
     Swal.fire({
       icon: nuevoEstado ? 'success' : 'info',
       title: nuevoEstado ? '¡Colegiada Verificada!' : 'Verificación Retirada',
@@ -481,9 +589,22 @@ export default function Landing() {
       cancelButtonColor: '#0A1128',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
-        setRegisteredUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
+        const filtered = registeredUsers.filter((u) => u.id !== targetUser.id);
+        setRegisteredUsers(filtered);
+        try {
+          localStorage.setItem('usuarios_colegio', JSON.stringify(filtered));
+        } catch (e) {
+          console.error(e);
+        }
+
+        try {
+          await supabase.from('usuarios').delete().eq('id', targetUser.id);
+        } catch (err) {
+          console.warn('Error eliminando en Supabase:', err);
+        }
+
         Swal.fire({
           icon: 'success',
           title: 'Usuaria Eliminada',
@@ -496,7 +617,7 @@ export default function Landing() {
     });
   };
 
-  const handleUpdateUser = (updatedData) => {
+  const handleUpdateUser = async (updatedData) => {
     const updated = registeredUsers.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u));
     setRegisteredUsers(updated);
     try {
@@ -508,6 +629,13 @@ export default function Landing() {
     // Si la usuaria actualizada es la usuaria activa en sesión, actualizar sesión también
     if (user && (user.id === updatedData.id || user.correo?.toLowerCase() === updatedData.correo?.toLowerCase())) {
       login({ ...user, ...updatedData });
+    }
+
+    // Guardar en Supabase en la nube
+    try {
+      await supabase.from('usuarios').upsert([updatedData]);
+    } catch (err) {
+      console.warn('Error actualizando usuario en Supabase:', err);
     }
   };
 
@@ -1322,18 +1450,7 @@ export default function Landing() {
       <CreateUserModal
         isOpen={isCreateUserModalOpen}
         onClose={() => setIsCreateUserModalOpen(false)}
-        onUserCreated={(newUser) => {
-          const ruth = registeredUsers.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
-          const luis = registeredUsers.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
-          const others = registeredUsers.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
-          const updated = [ruth, luis, newUser, ...others];
-          setRegisteredUsers(updated);
-          try {
-            localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
-          } catch (err) {
-            console.error(err);
-          }
-        }}
+        onUserCreated={handleCreateUser}
         existingUsers={registeredUsers}
       />
 

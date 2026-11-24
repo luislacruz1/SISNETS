@@ -271,3 +271,57 @@ END $$;
 -- 5. LIMPIAR DIRECTORIO (Vacío para iniciar pruebas de registro desde cero)
 -- ------------------------------------------------------------------------------
 TRUNCATE TABLE public.directorio_colegas;
+
+-- ------------------------------------------------------------------------------
+-- 6. PERMISOS Y TABLAS PARA SINCRONIZACIÓN CLOUD EN TIEMPO REAL (SISNETS 2.0)
+-- ------------------------------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
+
+-- Asegurar tabla usuarios
+CREATE TABLE IF NOT EXISTS public.usuarios (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  correo TEXT NOT NULL UNIQUE,
+  telefono TEXT,
+  rol TEXT DEFAULT 'colegiada',
+  condicion TEXT DEFAULT 'egresada',
+  centro TEXT,
+  sector TEXT,
+  estado TEXT DEFAULT 'activa',
+  verificada BOOLEAN DEFAULT true,
+  fechaRegistro TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Asegurar columnas del directorio
+ALTER TABLE public.directorio_colegas ALTER COLUMN id TYPE TEXT;
+ALTER TABLE public.directorio_colegas 
+  ADD COLUMN IF NOT EXISTS condicion TEXT DEFAULT 'egresada',
+  ADD COLUMN IF NOT EXISTS cargo TEXT,
+  ADD COLUMN IF NOT EXISTS cicloEstudio TEXT,
+  ADD COLUMN IF NOT EXISTS centroTipo TEXT,
+  ADD COLUMN IF NOT EXISTS fortalezas JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS verificada BOOLEAN DEFAULT true;
+
+-- Permisos directos para anon y authenticated
+GRANT ALL ON TABLE public.directorio_colegas TO anon, authenticated;
+GRANT ALL ON TABLE public.usuarios TO anon, authenticated;
+
+-- Políticas de RLS permisivas para la app
+ALTER TABLE public.directorio_colegas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir lectura publica de directorio" ON public.directorio_colegas;
+CREATE POLICY "Permitir lectura publica de directorio" ON public.directorio_colegas FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir publicacion publica de directorio" ON public.directorio_colegas;
+CREATE POLICY "Permitir publicacion publica de directorio" ON public.directorio_colegas FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir edicion de directorio" ON public.directorio_colegas;
+CREATE POLICY "Permitir edicion de directorio" ON public.directorio_colegas FOR UPDATE TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir eliminacion de directorio" ON public.directorio_colegas;
+CREATE POLICY "Permitir eliminacion de directorio" ON public.directorio_colegas FOR DELETE TO anon, authenticated USING (true);
+
+ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo en usuarios" ON public.usuarios;
+CREATE POLICY "Permitir todo en usuarios" ON public.usuarios FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+

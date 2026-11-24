@@ -212,6 +212,13 @@ export default function AuthSection({ isOpen, onClose }) {
         localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
         window.dispatchEvent(new Event('sisnets_users_updated'));
 
+        // Sincronizar nuevo usuario en la nube con Supabase
+        try {
+          await supabase.from('usuarios').upsert([newUser]);
+        } catch (cloudErr) {
+          console.warn('Error sincronizando nuevo usuario en la nube:', cloudErr);
+        }
+
         if (formData.remember && formData.correo) {
           localStorage.setItem('sisnets_remember_correo', formData.correo);
         }
