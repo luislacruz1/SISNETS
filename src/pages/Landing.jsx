@@ -33,7 +33,7 @@ import ColleagueCard from '../components/directory/ColleagueCard';
 import UsersManagement from '../components/admin/UsersManagement';
 import MetricsView from '../components/admin/MetricsView';
 import PublicLanding from '../components/public/PublicLanding';
-import { INITIAL_REGISTERED_USERS, DEMO_COLEGAS } from '../data/demoData';
+import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER } from '../data/demoData';
 import { isMasculineName } from '../utils/genderHelper';
 
 // Opciones del filtro desplegable moderno por condición
@@ -119,23 +119,53 @@ export default function Landing() {
     }
   };
 
-  // Gestión de Usuarios Registrados en el Colegio / Red
+  // Helper para depurar usuarios de prueba previos
+  const isDemoUser = (u) => {
+    if (!u) return false;
+    const demoIds = [
+      'admin_stephanie',
+      'usr_claudia',
+      'usr_valeria',
+      'usr_mariana',
+      'usr_camila',
+      'usr_roberto',
+      'usr_lucia',
+      'usr_andrea',
+      'usr_daniela',
+      'usr_patricia',
+      'usr_andream',
+      'usr_sofia',
+      'usr_mariap',
+      'usr_karen'
+    ];
+    if (demoIds.includes(u.id)) return true;
+    if (u.nombre && (
+      u.nombre.includes('Stephanie Natalia Laos') ||
+      u.nombre.includes('Claudia Morales') ||
+      u.nombre.includes('Valeria Sánchez') ||
+      u.nombre.includes('Mariana Gómez') ||
+      u.nombre.includes('Camila Fernández') ||
+      u.nombre.includes('Roberto Quispe')
+    )) return true;
+    return false;
+  };
+
+  // Gestión de Usuarios Registrados en el Colegio / Red (con Ruth Anastacio asegurada)
   const [registeredUsers, setRegisteredUsers] = useState(() => {
+    let users = [ADMIN_RUTH_USER];
     try {
       const stored = localStorage.getItem('usuarios_colegio');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((u) => ({
-            ...u,
-            centro: u.centro && u.centro.includes('Red de Colegas') ? 'SISNETS (Sede Central)' : u.centro
-          }));
+          const nonDemoUsers = parsed.filter((u) => !isDemoUser(u) && u.id !== 'admin_ruth');
+          users = [ADMIN_RUTH_USER, ...nonDemoUsers];
         }
       }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_REGISTERED_USERS;
+    return users;
   });
 
   // Guardar usuarias en localStorage ante cualquier cambio
@@ -172,27 +202,14 @@ export default function Landing() {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   };
 
-  // Estado del Directorio
+  // Estado del Directorio (Limpio de fichas demo)
   const [mentorCards, setMentorCards] = useState(() => {
     try {
       const stored = localStorage.getItem('directorio_colegas');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((c) => {
-            let item = { ...c };
-            if (item.tipo === 'Egresada / Colegiada') item.tipo = 'Egresada';
-            if (item.sector && (item.sector.toLowerCase() === 'abogada' || item.sector === item.cargo)) {
-              item.sector = 'Salud';
-              item.cargo = item.cargo || 'Abogada';
-            }
-            if (item.id === 'demo_1') {
-              item.tipo = 'Egresada';
-              item.cargo = item.cargo || 'Abogada';
-              item.sector = 'Salud';
-            }
-            return item;
-          });
+          return parsed.filter((c) => !c.id?.startsWith('demo_'));
         }
       }
     } catch (e) {
@@ -499,19 +516,6 @@ export default function Landing() {
     });
   };
 
-  const handleLoadDemoCards = () => {
-    setMentorCards(DEMO_COLEGAS);
-    setCurrentPage(1);
-    Swal.fire({
-      icon: 'success',
-      title: '12 Fichas de Demostración Cargadas',
-      text: 'Se han cargado 12 colegas de prueba (egresadas y practicantes) para probar el paginado en tiempo real.',
-      confirmButtonColor: '#0A1128',
-      timer: 2000,
-      showConfirmButton: false
-    });
-  };
-
   const handleClearAllCards = () => {
     Swal.fire({
       title: '¿Vaciar Todo el Directorio?',
@@ -659,11 +663,13 @@ export default function Landing() {
   // Usuarias filtradas para la Pestaña de Gestión de Usuarios
   const filteredUsers = useMemo(() => {
     return registeredUsers.filter((u) => {
-      const matchSearch = userSearchTerm === '' ||
-        u.nombre.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        u.correo.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        (u.centro && u.centro.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
-        (u.sector && u.sector.toLowerCase().includes(userSearchTerm.toLowerCase()));
+      const term = (userSearchTerm || '').trim().toLowerCase();
+      const matchSearch = term === '' ||
+        (u.nombre && u.nombre.toLowerCase().includes(term)) ||
+        (u.correo && u.correo.toLowerCase().includes(term)) ||
+        (u.telefono && u.telefono.toLowerCase().includes(term)) ||
+        (u.centro && u.centro.toLowerCase().includes(term)) ||
+        (u.sector && u.sector.toLowerCase().includes(term));
 
       let matchRole = true;
       if (userFilterRole === 'admin') matchRole = u.rol === 'admin';
@@ -777,7 +783,6 @@ export default function Landing() {
             handleLogout={handleLogout}
             handleExportCSV={handleExportCSV}
             handleExportUsersCSV={handleExportUsersCSV}
-            handleLoadDemoCards={handleLoadDemoCards}
             handleClearAllCards={handleClearAllCards}
           />
 
@@ -1108,15 +1113,6 @@ export default function Landing() {
                         >
                           + Registrar Directorio
                         </button>
-                        {mentorCards.length === 0 && (
-                          <button
-                            type="button"
-                            onClick={handleLoadDemoCards}
-                            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition active:scale-95"
-                          >
-                            Cargar 12 Fichas de Demostración
-                          </button>
-                        )}
                       </div>
                     </motion.div>
                   )}
@@ -1233,7 +1229,15 @@ export default function Landing() {
         isOpen={isCreateUserModalOpen}
         onClose={() => setIsCreateUserModalOpen(false)}
         onUserCreated={(newUser) => {
-          setRegisteredUsers((prev) => [newUser, ...prev]);
+          setRegisteredUsers((prev) => {
+            const updated = [newUser, ...prev.filter((u) => u.correo?.toLowerCase() !== newUser.correo?.toLowerCase())];
+            try {
+              localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
+            } catch (err) {
+              console.error(err);
+            }
+            return updated;
+          });
         }}
         existingUsers={registeredUsers}
       />
