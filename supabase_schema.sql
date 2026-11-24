@@ -1,291 +1,22 @@
 -- ==============================================================================
 -- SISNETS - SISTEMA DE NETWORKING EN TRABAJO SOCIAL
--- BASE DE DATOS COMPLETA PARA SUPABASE
--- Administradora: Ruth Anastacio (ruthanastacio191202@gmail.com / 123456)
--- Directorio: Vacío (Listo para registro manual de pruebas)
+-- ESQUEMA DEFINITIVO PARA SINCRONIZACIÓN EN LA NUBE (SUPABASE)
+-- Administradores Oficiales: Ruth Anastacio & Luis Jhonatan La Cruz Urbano
 -- ==============================================================================
 
--- Habilitar extensión para encriptación de contraseñas y UUIDs
+-- 1. Habilitar extensión pgcrypto si no existe
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ------------------------------------------------------------------------------
--- 1. TABLA: PROFILES (Perfiles vinculados al Auth de Supabase)
+-- 2. TABLA: USUARIOS (Sincronización de Colegiadas y Administradores)
 -- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  nombre TEXT NOT NULL,
-  correo TEXT NOT NULL UNIQUE,
-  rol TEXT NOT NULL DEFAULT 'colegiada' CHECK (rol IN ('admin', 'colegiada')),
-  cargo TEXT DEFAULT 'Trabajadora Social',
-  institucion TEXT DEFAULT 'SISNETS (Sede Central)',
-  telefono TEXT DEFAULT '+51 987 654 321',
-  avatar_url TEXT DEFAULT '/logo.png',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- Políticas de RLS para Profiles
-DROP POLICY IF EXISTS "Perfiles visibles para usuarios autenticados" ON public.profiles;
-CREATE POLICY "Perfiles visibles para usuarios autenticados" 
-ON public.profiles FOR SELECT TO authenticated USING (true);
-
-DROP POLICY IF EXISTS "Usuarios pueden actualizar su propio perfil" ON public.profiles;
-CREATE POLICY "Usuarios pueden actualizar su propio perfil" 
-ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
-
-DROP POLICY IF EXISTS "Admins pueden actualizar cualquier perfil" ON public.profiles;
-CREATE POLICY "Admins pueden actualizar cualquier perfil" 
-ON public.profiles FOR ALL TO authenticated 
-USING (
-  auth.uid() = id OR 
-  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND rol = 'admin')
-);
-
--- ------------------------------------------------------------------------------
--- 2. FUNCIÓN Y TRIGGER: Creación automática de perfil al registrarse
--- ------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_nombre TEXT;
-  v_rol TEXT;
-  v_cargo TEXT;
-  v_inst TEXT;
-BEGIN
-  IF NEW.email ILIKE '%ruthanastacio%' OR NEW.email ILIKE '%admin%' THEN
-    v_rol := 'admin';
-    v_cargo := 'Administradora General';
-    v_nombre := 'Ruth Anastacio';
-    v_inst := 'SISNETS (Sede Central)';
-  ELSE
-    v_rol := 'colegiada';
-    v_cargo := 'Trabajadora Social';
-    v_nombre := COALESCE(NEW.raw_user_meta_data->>'nombre', split_part(NEW.email, '@', 1));
-    v_inst := COALESCE(NEW.raw_user_meta_data->>'institucion', 'Hospital / Institución');
-  END IF;
-
-  INSERT INTO public.profiles (id, nombre, correo, rol, cargo, institucion)
-  VALUES (NEW.id, v_nombre, NEW.email, v_rol, v_cargo, v_inst)
-  ON CONFLICT (id) DO UPDATE SET
-    rol = EXCLUDED.rol,
-    cargo = EXCLUDED.cargo,
-    nombre = EXCLUDED.nombre;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- ------------------------------------------------------------------------------
--- 3. TABLA: DIRECTORIO_COLEGAS (Centros Laborales, Prácticas y Apoyo Fraterno)
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.directorio_colegas (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  nombre TEXT NOT NULL,
-  institucion TEXT NOT NULL,
-  sector TEXT NOT NULL,
-  tipo TEXT DEFAULT 'Colegiada',
-  apoyo TEXT NOT NULL,
-  telefono TEXT NOT NULL,
-  correo TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE public.directorio_colegas ENABLE ROW LEVEL SECURITY;
-
--- Políticas de RLS para Directorio
-DROP POLICY IF EXISTS "Lectura de directorio para usuarias autenticadas" ON public.directorio_colegas;
-CREATE POLICY "Lectura de directorio para usuarias autenticadas" 
-ON public.directorio_colegas FOR SELECT TO authenticated USING (true);
-
-DROP POLICY IF EXISTS "Colegiadas pueden publicar su centro" ON public.directorio_colegas;
-CREATE POLICY "Colegiadas pueden publicar su centro" 
-ON public.directorio_colegas FOR INSERT TO authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Edicion de fichas (propietaria o admin)" ON public.directorio_colegas;
-CREATE POLICY "Edicion de fichas (propietaria o admin)" 
-ON public.directorio_colegas FOR UPDATE TO authenticated 
-USING (
-  auth.uid() = user_id OR 
-  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND rol = 'admin')
-);
-
-DROP POLICY IF EXISTS "Eliminacion de fichas (propietaria o admin)" ON public.directorio_colegas;
-CREATE POLICY "Eliminacion de fichas (propietaria o admin)" 
-ON public.directorio_colegas FOR DELETE TO authenticated 
-USING (
-  auth.uid() = user_id OR 
-  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND rol = 'admin')
-);
-
--- ------------------------------------------------------------------------------
--- 4. USUARIO ADMINISTRADOR ÚNICO: Ruth Anastacio (ruthanastacio191202@gmail.com / 123456)
--- ------------------------------------------------------------------------------
-DO $$
-DECLARE
-  v_admin_id UUID := gen_random_uuid();
-  v_admin_email TEXT := 'ruthanastacio191202@gmail.com';
-  v_admin_pass TEXT := '123456';
-  v_encrypted_pass TEXT := crypt(v_admin_pass, gen_salt('bf'));
-BEGIN
-  -- Si el usuario no existe en auth.users, lo creamos
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = v_admin_email) THEN
-    INSERT INTO auth.users (
-      id,
-      instance_id,
-      email,
-      encrypted_password,
-      email_confirmed_at,
-      raw_app_meta_data,
-      raw_user_meta_data,
-      created_at,
-      updated_at,
-      role,
-      aud
-    ) VALUES (
-      v_admin_id,
-      '00000000-0000-0000-0000-000000000000',
-      v_admin_email,
-      v_encrypted_pass,
-      NOW(),
-      '{"provider":"email","providers":["email"]}'::jsonb,
-      '{"nombre":"Ruth Anastacio","institucion":"SISNETS (Sede Central)"}'::jsonb,
-      NOW(),
-      NOW(),
-      'authenticated',
-      'authenticated'
-    );
-
-    -- Insertar en auth.identities para compatibilidad con GoTrue
-    BEGIN
-      INSERT INTO auth.identities (
-        id,
-        user_id,
-        identity_data,
-        provider,
-        provider_id,
-        last_sign_in_at,
-        created_at,
-        updated_at
-      ) VALUES (
-        v_admin_id::text,
-        v_admin_id,
-        json_build_object('sub', v_admin_id::text, 'email', v_admin_email)::jsonb,
-        'email',
-        v_admin_id::text,
-        NOW(),
-        NOW(),
-        NOW()
-      );
-    EXCEPTION WHEN OTHERS THEN
-      BEGIN
-        INSERT INTO auth.identities (
-          id,
-          user_id,
-          identity_data,
-          provider,
-          last_sign_in_at,
-          created_at,
-          updated_at
-        ) VALUES (
-          v_admin_id::text,
-          v_admin_id,
-          json_build_object('sub', v_admin_id::text, 'email', v_admin_email)::jsonb,
-          'email',
-          NOW(),
-          NOW(),
-          NOW()
-        );
-      EXCEPTION WHEN OTHERS THEN
-        NULL;
-      END;
-    END;
-
-    -- Asegurar perfil en public.profiles
-    INSERT INTO public.profiles (
-      id,
-      nombre,
-      correo,
-      rol,
-      cargo,
-      institucion,
-      telefono
-    ) VALUES (
-      v_admin_id,
-      'Ruth Anastacio',
-      v_admin_email,
-      'admin',
-      'Administradora General',
-      'SISNETS (Sede Central)',
-      '+51 987 654 321'
-    )
-    ON CONFLICT (id) DO UPDATE SET
-      rol = 'admin',
-      cargo = 'Administradora General',
-      nombre = 'Ruth Anastacio';
-
-  ELSE
-    -- Si ya existía, actualizamos su contraseña a 123456 y confirmamos correo
-    SELECT id INTO v_admin_id FROM auth.users WHERE email = v_admin_email;
-
-    UPDATE auth.users
-    SET 
-      encrypted_password = v_encrypted_pass,
-      email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-      raw_user_meta_data = json_build_object('nombre', 'Ruth Anastacio', 'institucion', 'SISNETS (Sede Central)')::jsonb,
-      updated_at = NOW()
-    WHERE email = v_admin_email;
-
-    -- Actualizar perfil en public.profiles
-    INSERT INTO public.profiles (
-      id,
-      nombre,
-      correo,
-      rol,
-      cargo,
-      institucion,
-      telefono
-    ) VALUES (
-      v_admin_id,
-      'Ruth Anastacio',
-      v_admin_email,
-      'admin',
-      'Administradora General',
-      'SISNETS (Sede Central)',
-      '+51 987 654 321'
-    )
-    ON CONFLICT (id) DO UPDATE SET
-      rol = 'admin',
-      cargo = 'Administradora General',
-      nombre = 'Ruth Anastacio';
-  END IF;
-END $$;
-
--- ------------------------------------------------------------------------------
--- 5. LIMPIAR DIRECTORIO (Vacío para iniciar pruebas de registro desde cero)
--- ------------------------------------------------------------------------------
-TRUNCATE TABLE public.directorio_colegas;
-
--- ------------------------------------------------------------------------------
--- 6. PERMISOS Y TABLAS PARA SINCRONIZACIÓN CLOUD EN TIEMPO REAL (SISNETS 2.0)
--- ------------------------------------------------------------------------------
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
-
--- Asegurar tabla usuarios
 CREATE TABLE IF NOT EXISTS public.usuarios (
   id TEXT PRIMARY KEY,
   nombre TEXT NOT NULL,
   correo TEXT NOT NULL UNIQUE,
   telefono TEXT,
+  password TEXT,
+  debeCambiarPassword BOOLEAN DEFAULT false,
   rol TEXT DEFAULT 'colegiada',
   condicion TEXT DEFAULT 'egresada',
   centro TEXT,
@@ -293,35 +24,103 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
   estado TEXT DEFAULT 'activa',
   verificada BOOLEAN DEFAULT true,
   fechaRegistro TEXT,
+  avatar TEXT DEFAULT '/logo.png',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Asegurar columnas del directorio
-ALTER TABLE public.directorio_colegas ALTER COLUMN id TYPE TEXT;
-ALTER TABLE public.directorio_colegas 
-  ADD COLUMN IF NOT EXISTS condicion TEXT DEFAULT 'egresada',
-  ADD COLUMN IF NOT EXISTS cargo TEXT,
-  ADD COLUMN IF NOT EXISTS cicloEstudio TEXT,
-  ADD COLUMN IF NOT EXISTS centroTipo TEXT,
-  ADD COLUMN IF NOT EXISTS fortalezas JSONB DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS verificada BOOLEAN DEFAULT true;
+-- Asegurar que todas las columnas existan si la tabla ya había sido creada antes
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debeCambiarPassword BOOLEAN DEFAULT false;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '/logo.png';
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
--- Permisos directos para anon y authenticated
-GRANT ALL ON TABLE public.directorio_colegas TO anon, authenticated;
-GRANT ALL ON TABLE public.usuarios TO anon, authenticated;
+-- ------------------------------------------------------------------------------
+-- 3. TABLA: DIRECTORIO_COLEGAS (Publicaciones de Centros y Apoyo)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.directorio_colegas (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  nombre TEXT NOT NULL,
+  condicion TEXT DEFAULT 'egresada',
+  tipo TEXT DEFAULT 'Colegiada',
+  cicloEstudio TEXT,
+  institucion TEXT NOT NULL,
+  centroTipo TEXT DEFAULT 'Centro Laboral',
+  cargo TEXT,
+  sector TEXT DEFAULT 'General',
+  apoyo TEXT,
+  fortalezas JSONB DEFAULT '[]'::jsonb,
+  telefono TEXT NOT NULL,
+  correo TEXT,
+  verificada BOOLEAN DEFAULT true,
+  avatar TEXT DEFAULT '/logo.png',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Políticas de RLS permisivas para la app
-ALTER TABLE public.directorio_colegas ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Permitir lectura publica de directorio" ON public.directorio_colegas;
-CREATE POLICY "Permitir lectura publica de directorio" ON public.directorio_colegas FOR SELECT TO anon, authenticated USING (true);
-DROP POLICY IF EXISTS "Permitir publicacion publica de directorio" ON public.directorio_colegas;
-CREATE POLICY "Permitir publicacion publica de directorio" ON public.directorio_colegas FOR INSERT TO anon, authenticated WITH CHECK (true);
-DROP POLICY IF EXISTS "Permitir edicion de directorio" ON public.directorio_colegas;
-CREATE POLICY "Permitir edicion de directorio" ON public.directorio_colegas FOR UPDATE TO anon, authenticated USING (true);
-DROP POLICY IF EXISTS "Permitir eliminacion de directorio" ON public.directorio_colegas;
-CREATE POLICY "Permitir eliminacion de directorio" ON public.directorio_colegas FOR DELETE TO anon, authenticated USING (true);
+-- Si la tabla existía previamente con tipos UUID o restricciones de llave foránea, adaptarla:
+ALTER TABLE IF EXISTS public.directorio_colegas DROP CONSTRAINT IF EXISTS directorio_colegas_user_id_fkey;
+ALTER TABLE IF EXISTS public.directorio_colegas ALTER COLUMN id TYPE TEXT;
+ALTER TABLE IF EXISTS public.directorio_colegas ALTER COLUMN user_id TYPE TEXT;
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS condicion TEXT DEFAULT 'egresada';
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS cicloEstudio TEXT;
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS centroTipo TEXT DEFAULT 'Centro Laboral';
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS cargo TEXT;
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS fortalezas JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS verificada BOOLEAN DEFAULT true;
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '/logo.png';
+ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
+-- ------------------------------------------------------------------------------
+-- 4. PERMISOS DE ACCESO (GRANT A ANON Y AUTHENTICATED)
+-- ------------------------------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.usuarios TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.directorio_colegas TO anon, authenticated, service_role;
+
+-- ------------------------------------------------------------------------------
+-- 5. POLÍTICAS DE SEGURIDAD (ROW LEVEL SECURITY)
+-- ------------------------------------------------------------------------------
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Permitir todo en usuarios" ON public.usuarios;
-CREATE POLICY "Permitir todo en usuarios" ON public.usuarios FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo en usuarios"
+ON public.usuarios FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
+ALTER TABLE public.directorio_colegas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo en directorio" ON public.directorio_colegas;
+CREATE POLICY "Permitir todo en directorio"
+ON public.directorio_colegas FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- ------------------------------------------------------------------------------
+-- 6. PUBLICACIÓN REALTIME (WebSocket en tiempo real < 1 segundo)
+-- ------------------------------------------------------------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'usuarios'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.usuarios;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'directorio_colegas'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.directorio_colegas;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL; -- Si ya estaba agregado o permisos no aplican, continuar
+END $$;
+
+-- ------------------------------------------------------------------------------
+-- 7. REGISTRO DE ADMINISTRADORES OFICIALES
+-- ------------------------------------------------------------------------------
+INSERT INTO public.usuarios (id, nombre, correo, telefono, rol, condicion, centro, sector, estado, verificada, fechaRegistro, avatar)
+VALUES 
+  ('admin_ruth', 'Ruth Anastacio', 'ruthanastacio191202@gmail.com', '+51 987 654 321', 'admin', 'egresada', 'SISNETS (Sede Central)', 'Gestión Institucional', 'activa', true, '01/01/2026', '/logo.png'),
+  ('usr_luis_lacruz', 'Luis Jhonatan La Cruz Urbano', 'luislacruz326@gmail.com', '+51 958 262 585', 'admin', 'egresada', 'SISNETS (Sede Central)', 'Gestión Institucional', 'activa', true, '01/01/2026', '/logo.png')
+ON CONFLICT (correo) DO UPDATE SET
+  rol = 'admin',
+  nombre = EXCLUDED.nombre,
+  telefono = EXCLUDED.telefono;

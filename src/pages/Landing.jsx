@@ -35,7 +35,18 @@ import MetricsView from '../components/admin/MetricsView';
 import PublicLanding from '../components/public/PublicLanding';
 import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER, LUIS_LACRUZ_USER } from '../data/demoData';
 import { isMasculineName } from '../utils/genderHelper';
-import { supabase } from '../lib/supabaseClient';
+import {
+  cleanAndMergeUsers,
+  fetchRemoteUsers,
+  saveRemoteUser,
+  updateRemoteUser,
+  deleteRemoteUser,
+  fetchRemoteDirectorio,
+  saveRemoteDirectorioCard,
+  updateRemoteDirectorioCard,
+  deleteRemoteDirectorioCard,
+  subscribeToCloudChanges
+} from '../lib/dataSyncService';
 
 // Opciones del filtro desplegable moderno por condición
 const FILTER_OPTIONS = [
@@ -92,51 +103,6 @@ const USER_FILTER_OPTIONS = [
     activeColor: 'text-rose-600 dark:text-rose-400'
   }
 ];
-
-// Helper maestro para mantener intactos los usuarios registrados y preservar ediciones
-const cleanAndMergeUsers = (parsed) => {
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    return [ADMIN_RUTH_USER, LUIS_LACRUZ_USER];
-  }
-
-  // IDs de demo antiguos que deben ser depurados si aún quedan en el almacenamiento
-  const FAKE_DEMO_IDS = [
-    'admin_stephanie', 'usr_claudia', 'usr_valeria', 'usr_mariana',
-    'usr_camila', 'usr_roberto', 'usr_lucia', 'usr_andrea',
-    'usr_daniela', 'usr_patricia', 'usr_andream', 'usr_sofia', 'usr_mariap', 'usr_karen'
-  ];
-
-  // 1. Buscar a Ruth en el almacenamiento para preservar cualquier cambio guardado (nombre, teléfono, etc.)
-  const storedRuth = parsed.find(
-    (u) => u && (u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com')
-  );
-  const activeRuth = storedRuth
-    ? { ...ADMIN_RUTH_USER, ...storedRuth, rol: 'admin' }
-    : ADMIN_RUTH_USER;
-
-  // 2. Buscar a Luis en el almacenamiento para preservar cualquier cambio guardado
-  const storedLuis = parsed.find(
-    (u) => u && (u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com')
-  );
-  const activeLuis = storedLuis
-    ? { ...LUIS_LACRUZ_USER, ...storedLuis, rol: storedLuis.rol || 'admin' }
-    : LUIS_LACRUZ_USER;
-
-  // 3. Extraer todos los usuarios registrados reales creados en el sistema
-  const realUsers = parsed.filter(
-    (u) =>
-      u &&
-      typeof u === 'object' &&
-      !FAKE_DEMO_IDS.includes(u.id) &&
-      u.id !== 'admin_ruth' &&
-      u.id !== 'usr_luis_lacruz' &&
-      u.correo?.toLowerCase() !== 'ruthanastacio191202@gmail.com' &&
-      u.correo?.toLowerCase() !== 'luislacruz326@gmail.com' &&
-      u.correo?.toLowerCase() !== 'admin@trabajosocial.org'
-  );
-
-  return [activeRuth, activeLuis, ...realUsers];
-};
 
 export default function Landing() {
   const { user, logout, login } = useAuth();
@@ -288,69 +254,50 @@ export default function Landing() {
     }
   }, [mentorCards]);
 
-  // Función de sincronización del Directorio y Usuarios (Local + Supabase Cloud)
+  // Función de sincronización del Directorio y Usuarios (Nube Supabase + Respaldo Local)
   const syncDirectorio = async (isBackground = false) => {
     try {
       if (!isBackground) setIsRefreshing(true);
 
-      // 1. Sincronización instantánea desde localStorage (Caché local ultra-rápida)
-      const stored = localStorage.getItem('directorio_colegas');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const cleanCards = parsed.filter((c) => c && !c.id?.startsWith('demo_'));
-          setMentorCards((prev) => {
-            if (JSON.stringify(prev) !== JSON.stringify(cleanCards)) {
-              return cleanCards;
+      // 1. Sincronizar directorio desde la nube Supabase
+      const cloudCards = await fetchRemoteDirectorio();
+      if (cloudCards && Array.isArray(cloudCards)) {
+        setMentorCards(cloudCards);
+      } else {
+        const stored = localStorage.getItem('directorio_colegas');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const cleanCards = parsed.filter((c) => c && !String(c.id).startsWith('demo_'));
+            setMentorCards((prev) => {
+              if (JSON.stringify(prev) !== JSON.stringify(cleanCards)) {
+                return cleanCards;
+              }
+              return prev;
+            });
+          }
+        }
+      }
+
+      // 2. Sincronizar usuarios desde la nube Supabase
+      const cloudUsers = await fetchRemoteUsers();
+      if (cloudUsers && Array.isArray(cloudUsers)) {
+        setRegisteredUsers(cloudUsers);
+      } else {
+        const storedUsers = localStorage.getItem('usuarios_colegio');
+        if (storedUsers) {
+          const parsedUsers = JSON.parse(storedUsers);
+          const mergedUsers = cleanAndMergeUsers(parsedUsers);
+          setRegisteredUsers((prev) => {
+            if (JSON.stringify(prev) !== JSON.stringify(mergedUsers)) {
+              return mergedUsers;
             }
             return prev;
           });
         }
       }
-
-      const storedUsers = localStorage.getItem('usuarios_colegio');
-      if (storedUsers) {
-        const parsedUsers = JSON.parse(storedUsers);
-        const mergedUsers = cleanAndMergeUsers(parsedUsers);
-        setRegisteredUsers((prev) => {
-          if (JSON.stringify(prev) !== JSON.stringify(mergedUsers)) {
-            return mergedUsers;
-          }
-          return prev;
-        });
-      }
-
-      // 2. SINCRONIZACIÓN EN LA NUBE (SUPABASE)
-      try {
-        const [cardsRes, usersRes] = await Promise.all([
-          supabase.from('directorio_colegas').select('*').order('created_at', { ascending: false }),
-          supabase.from('usuarios').select('*')
-        ]);
-
-        if (cardsRes.data && Array.isArray(cardsRes.data) && cardsRes.data.length > 0) {
-          const cleanCloudCards = cardsRes.data.filter((c) => c && !c.id?.startsWith('demo_'));
-          setMentorCards(cleanCloudCards);
-          try {
-            localStorage.setItem('directorio_colegas', JSON.stringify(cleanCloudCards));
-          } catch (e) {
-            console.error(e);
-          }
-        }
-
-        if (usersRes.data && Array.isArray(usersRes.data) && usersRes.data.length > 0) {
-          const mergedCloudUsers = cleanAndMergeUsers(usersRes.data);
-          setRegisteredUsers(mergedCloudUsers);
-          try {
-            localStorage.setItem('usuarios_colegio', JSON.stringify(mergedCloudUsers));
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      } catch (cloudErr) {
-        console.warn('Sincronización en la nube en espera:', cloudErr);
-      }
     } catch (e) {
-      console.error('Error sincronizando en Short Polling:', e);
+      console.error('Error sincronizando:', e);
     } finally {
       if (!isBackground) {
         setTimeout(() => setIsRefreshing(false), 500);
@@ -358,12 +305,17 @@ export default function Landing() {
     }
   };
 
-  // SHORT POLLING CADA 20 SEGUNDOS (Estilo SISGEIN + Sincronización Cloud)
+  // SINCRONIZACIÓN EN TIEMPO REAL (WebSockets + Reloj de 20s + Eventos Locales)
   useEffect(() => {
-    // Sincronización inicial con la nube
-    syncDirectorio(true);
+    // 1. Carga inicial inmediata desde la nube
+    syncDirectorio(false);
 
-    // 1. Sincronización ante eventos locales y cambios de pestaña
+    // 2. Suscripción instantánea a cambios en la nube por WebSocket (< 1 segundo)
+    const unsubscribeCloud = subscribeToCloudChanges(() => {
+      syncDirectorio(true);
+    });
+
+    // 3. Sincronización instantánea ante eventos entre pestañas o eventos locales
     const handleStorageChange = (e) => {
       if (e.key === 'directorio_colegas' || e.key === 'usuarios_colegio') {
         syncDirectorio(true);
@@ -373,17 +325,18 @@ export default function Landing() {
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('sisnets_directorio_updated', handleDirectorioEvent);
-    window.addEventListener('focus', handleDirectorioEvent);
+    window.addEventListener('sisnets_users_updated', handleDirectorioEvent);
 
-    // 2. Reloj maestro de Short Polling: ciclo cada 20 segundos
+    // 4. Reloj maestro de Short Polling: ciclo cada 20 segundos (Garantía continua)
     const pollingInterval = setInterval(() => {
       syncDirectorio(true);
     }, 20000);
 
     return () => {
+      unsubscribeCloud();
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('sisnets_directorio_updated', handleDirectorioEvent);
-      window.removeEventListener('focus', handleDirectorioEvent);
+      window.removeEventListener('sisnets_users_updated', handleDirectorioEvent);
       clearInterval(pollingInterval);
     };
   }, []);
@@ -397,7 +350,7 @@ export default function Landing() {
     setCurrentPage(1);
   }, [searchTerm, selectedFilter, itemsPerPage]);
 
-  const handleAddNewSupport = async (newCard) => {
+  const handleAddNewSupport = (newCard) => {
     const cardWithStatus = {
       ...newCard,
       verificada: user?.rol === 'admin' ? true : !!newCard.verificada
@@ -413,11 +366,13 @@ export default function Landing() {
     }
     setCurrentPage(1);
 
+    // Guardar en la nube Supabase en segundo plano
+    saveRemoteDirectorioCard(cardWithStatus);
+
     // 2. Sincronizar en lista de usuarias registradas
     const exists = registeredUsers.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
-    let newUserFromCard = null;
     if (!exists) {
-      newUserFromCard = {
+      const newUserFromCard = {
         id: 'usr_' + Date.now(),
         nombre: cardWithStatus.nombre,
         correo: cardWithStatus.correo || `usuario_${Date.now()}@sisnets.pe`,
@@ -437,16 +392,7 @@ export default function Landing() {
       } catch (e) {
         console.error(e);
       }
-    }
-
-    // 3. Sincronización en la Nube con Supabase
-    try {
-      await supabase.from('directorio_colegas').upsert([cardWithStatus]);
-      if (newUserFromCard) {
-        await supabase.from('usuarios').upsert([newUserFromCard]);
-      }
-    } catch (err) {
-      console.warn('Guardado en la nube en segundo plano:', err);
+      saveRemoteUser(newUserFromCard);
     }
 
     Swal.fire({
@@ -459,41 +405,12 @@ export default function Landing() {
     });
   };
 
-  const handleCreateUser = async (newUser) => {
-    const ruth = registeredUsers.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
-    const luis = registeredUsers.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
-    const others = registeredUsers.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
-    const updated = [ruth, luis, newUser, ...others];
-    setRegisteredUsers(updated);
-    try {
-      localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
-    } catch (err) {
-      console.error(err);
-    }
-
-    // Guardar en Supabase en la nube
-    try {
-      await supabase.from('usuarios').upsert([newUser]);
-    } catch (err) {
-      console.warn('Error guardando usuario en Supabase:', err);
-    }
-  };
-
-  const handleToggleUserRole = async (targetUser) => {
+  const handleToggleUserRole = (targetUser) => {
     const nuevoRol = targetUser.rol === 'admin' ? 'colegiada' : 'admin';
-    const updatedUsers = registeredUsers.map((u) => (u.id === targetUser.id ? { ...u, rol: nuevoRol } : u));
-    setRegisteredUsers(updatedUsers);
-    try {
-      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
-    } catch (e) {
-      console.error(e);
-    }
-
-    try {
-      await supabase.from('usuarios').update({ rol: nuevoRol }).eq('id', targetUser.id);
-    } catch (err) {
-      console.warn('Error actualizando rol en Supabase:', err);
-    }
+    setRegisteredUsers((prev) =>
+      prev.map((u) => (u.id === targetUser.id ? { ...u, rol: nuevoRol } : u))
+    );
+    updateRemoteUser(targetUser.id, { rol: nuevoRol });
 
     Swal.fire({
       icon: 'success',
@@ -507,21 +424,12 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserStatus = async (targetUser) => {
+  const handleToggleUserStatus = (targetUser) => {
     const nuevoEstado = targetUser.estado === 'activa' ? 'suspendida' : 'activa';
-    const updatedUsers = registeredUsers.map((u) => (u.id === targetUser.id ? { ...u, estado: nuevoEstado } : u));
-    setRegisteredUsers(updatedUsers);
-    try {
-      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
-    } catch (e) {
-      console.error(e);
-    }
-
-    try {
-      await supabase.from('usuarios').update({ estado: nuevoEstado }).eq('id', targetUser.id);
-    } catch (err) {
-      console.warn('Error actualizando estado en Supabase:', err);
-    }
+    setRegisteredUsers((prev) =>
+      prev.map((u) => (u.id === targetUser.id ? { ...u, estado: nuevoEstado } : u))
+    );
+    updateRemoteUser(targetUser.id, { estado: nuevoEstado });
 
     Swal.fire({
       icon: nuevoEstado === 'activa' ? 'success' : 'warning',
@@ -535,37 +443,21 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserVerify = async (targetUser) => {
+  const handleToggleUserVerify = (targetUser) => {
     const nuevoEstado = !targetUser.verificada;
-    const updatedUsers = registeredUsers.map((u) => (u.id === targetUser.id ? { ...u, verificada: nuevoEstado } : u));
-    setRegisteredUsers(updatedUsers);
-    try {
-      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
-    } catch (e) {
-      console.error(e);
-    }
-
-    const updatedCards = mentorCards.map((c) => {
-      if (c.correo?.toLowerCase() === targetUser.correo?.toLowerCase() || c.nombre === targetUser.nombre) {
-        return { ...c, verificada: nuevoEstado };
-      }
-      return c;
-    });
-    setMentorCards(updatedCards);
-    try {
-      localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
-    } catch (e) {
-      console.error(e);
-    }
-
-    try {
-      await Promise.all([
-        supabase.from('usuarios').update({ verificada: nuevoEstado }).eq('id', targetUser.id),
-        supabase.from('directorio_colegas').update({ verificada: nuevoEstado }).eq('correo', targetUser.correo)
-      ]);
-    } catch (err) {
-      console.warn('Error actualizando verificacion en Supabase:', err);
-    }
+    setRegisteredUsers((prev) =>
+      prev.map((u) => (u.id === targetUser.id ? { ...u, verificada: nuevoEstado } : u))
+    );
+    setMentorCards((prev) =>
+      prev.map((c) => {
+        if (c.correo?.toLowerCase() === targetUser.correo?.toLowerCase() || c.nombre === targetUser.nombre) {
+          return { ...c, verificada: nuevoEstado };
+        }
+        return c;
+      })
+    );
+    updateRemoteUser(targetUser.id, { verificada: nuevoEstado });
+    updateRemoteDirectorioCard(targetUser.id, { verificada: nuevoEstado });
 
     Swal.fire({
       icon: nuevoEstado ? 'success' : 'info',
@@ -589,22 +481,10 @@ export default function Landing() {
       cancelButtonColor: '#0A1128',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
-    }).then(async (res) => {
+    }).then((res) => {
       if (res.isConfirmed) {
-        const filtered = registeredUsers.filter((u) => u.id !== targetUser.id);
-        setRegisteredUsers(filtered);
-        try {
-          localStorage.setItem('usuarios_colegio', JSON.stringify(filtered));
-        } catch (e) {
-          console.error(e);
-        }
-
-        try {
-          await supabase.from('usuarios').delete().eq('id', targetUser.id);
-        } catch (err) {
-          console.warn('Error eliminando en Supabase:', err);
-        }
-
+        setRegisteredUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
+        deleteRemoteUser(targetUser.id);
         Swal.fire({
           icon: 'success',
           title: 'Usuaria Eliminada',
@@ -617,7 +497,7 @@ export default function Landing() {
     });
   };
 
-  const handleUpdateUser = async (updatedData) => {
+  const handleUpdateUser = (updatedData) => {
     const updated = registeredUsers.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u));
     setRegisteredUsers(updated);
     try {
@@ -625,17 +505,11 @@ export default function Landing() {
     } catch (err) {
       console.error(err);
     }
+    updateRemoteUser(updatedData.id, updatedData);
 
     // Si la usuaria actualizada es la usuaria activa en sesión, actualizar sesión también
     if (user && (user.id === updatedData.id || user.correo?.toLowerCase() === updatedData.correo?.toLowerCase())) {
       login({ ...user, ...updatedData });
-    }
-
-    // Guardar en Supabase en la nube
-    try {
-      await supabase.from('usuarios').upsert([updatedData]);
-    } catch (err) {
-      console.warn('Error actualizando usuario en Supabase:', err);
     }
   };
 
@@ -775,6 +649,7 @@ export default function Landing() {
     }).then((result) => {
       if (result.isConfirmed) {
         setMentorCards((prev) => prev.filter((c) => c.id !== card.id));
+        deleteRemoteDirectorioCard(card.id);
         Swal.fire({
           icon: 'success',
           title: 'Ficha Retirada',
@@ -840,6 +715,7 @@ export default function Landing() {
       setMentorCards((prev) =>
         prev.map((c) => (c.id === card.id ? { ...c, ...formValues } : c))
       );
+      updateRemoteDirectorioCard(card.id, formValues);
       Swal.fire({
         icon: 'success',
         title: 'Ficha Actualizada',
@@ -1450,7 +1326,19 @@ export default function Landing() {
       <CreateUserModal
         isOpen={isCreateUserModalOpen}
         onClose={() => setIsCreateUserModalOpen(false)}
-        onUserCreated={handleCreateUser}
+        onUserCreated={(newUser) => {
+          const ruth = registeredUsers.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
+          const luis = registeredUsers.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
+          const others = registeredUsers.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
+          const updated = [ruth, luis, newUser, ...others];
+          setRegisteredUsers(updated);
+          try {
+            localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
+          } catch (err) {
+            console.error(err);
+          }
+          saveRemoteUser(newUser);
+        }}
         existingUsers={registeredUsers}
       />
 

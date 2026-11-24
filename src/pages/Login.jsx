@@ -29,6 +29,7 @@ import { useAuth } from '../context/AuthContext';
 import DynamicNetworkCanvas from '../components/DynamicNetworkCanvas';
 import PeruFlag from '../components/common/PeruFlag';
 import { supabase } from '../lib/supabaseClient';
+import { saveRemoteUser } from '../lib/dataSyncService';
 
 export default function Login() {
   const { user, login, logout } = useAuth();
@@ -233,14 +234,8 @@ export default function Login() {
         // Guardar nuevo usuario de inmediato en el almacenamiento
         usersList.unshift(newUser);
         localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        saveRemoteUser(newUser);
         window.dispatchEvent(new Event('sisnets_users_updated'));
-
-        // Sincronizar nuevo usuario en la nube con Supabase
-        try {
-          await supabase.from('usuarios').upsert([newUser]);
-        } catch (cloudErr) {
-          console.warn('Error sincronizando nuevo usuario en la nube:', cloudErr);
-        }
 
         if (formData.remember && formData.correo) {
           localStorage.setItem('sisnets_remember_correo', formData.correo);
@@ -336,6 +331,7 @@ export default function Login() {
         localStorage.removeItem('sisnets_remember_correo');
       }
 
+      saveRemoteUser(targetUser);
       login(targetUser);
       window.dispatchEvent(new Event('sisnets_users_updated'));
 

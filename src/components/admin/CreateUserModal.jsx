@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
 import { formatTitleCase } from '../../utils/genderHelper';
+import { saveRemoteUser } from '../../lib/dataSyncService';
 
 // Generador de clave temporal aleatoria (ej: Sisnets1, Sisnets7, Sisnets42)
 const generateTempPassword = () => {
@@ -119,6 +120,8 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated, existi
         year: 'numeric'
       })
     };
+
+    saveRemoteUser(newUser);
 
     if (onUserCreated) {
       onUserCreated(newUser);
