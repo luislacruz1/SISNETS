@@ -4,11 +4,37 @@
 -- Administradores Oficiales: Ruth Anastacio & Luis Jhonatan La Cruz Urbano
 -- ==============================================================================
 
--- 1. Habilitar extensión pgcrypto si no existe
+-- 1. Habilitar extensión pgcrypto
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ------------------------------------------------------------------------------
--- 2. TABLA: USUARIOS (Sincronización de Colegiadas y Administradores)
+-- 2. ELIMINAR POLÍTICAS PREVIAS EN DIRECTORIO QUE BLOQUEAN CAMBIO DE TIPO
+-- ------------------------------------------------------------------------------
+DO $$
+DECLARE
+  pol RECORD;
+BEGIN
+  -- Eliminar automáticamente todas las políticas existentes en directorio_colegas
+  FOR pol IN 
+    SELECT policyname 
+    FROM pg_policies 
+    WHERE tablename = 'directorio_colegas' AND schemaname = 'public'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.directorio_colegas', pol.policyname);
+  END LOOP;
+  
+  -- Eliminar automáticamente todas las políticas existentes en usuarios
+  FOR pol IN 
+    SELECT policyname 
+    FROM pg_policies 
+    WHERE tablename = 'usuarios' AND schemaname = 'public'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.usuarios', pol.policyname);
+  END LOOP;
+END $$;
+
+-- ------------------------------------------------------------------------------
+-- 3. TABLA: USUARIOS (Sincronización de Colegiadas y Administradores)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.usuarios (
   id TEXT PRIMARY KEY,
@@ -28,14 +54,13 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Asegurar que todas las columnas existan si la tabla ya había sido creada antes
 ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debeCambiarPassword BOOLEAN DEFAULT false;
 ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '/logo.png';
 ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- ------------------------------------------------------------------------------
--- 3. TABLA: DIRECTORIO_COLEGAS (Publicaciones de Centros y Apoyo)
+-- 4. TABLA: DIRECTORIO_COLEGAS (Publicaciones de Centros y Apoyo)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.directorio_colegas (
   id TEXT PRIMARY KEY,
@@ -57,7 +82,7 @@ CREATE TABLE IF NOT EXISTS public.directorio_colegas (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Si la tabla existía previamente con tipos UUID o restricciones de llave foránea, adaptarla:
+-- Ahora que las políticas fueron eliminadas, alterar tipos y columnas sin restricción
 ALTER TABLE IF EXISTS public.directorio_colegas DROP CONSTRAINT IF EXISTS directorio_colegas_user_id_fkey;
 ALTER TABLE IF EXISTS public.directorio_colegas ALTER COLUMN id TYPE TEXT;
 ALTER TABLE IF EXISTS public.directorio_colegas ALTER COLUMN user_id TYPE TEXT;
@@ -71,14 +96,14 @@ ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS avatar 
 ALTER TABLE IF EXISTS public.directorio_colegas ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- ------------------------------------------------------------------------------
--- 4. PERMISOS DE ACCESO (GRANT A ANON Y AUTHENTICATED)
+-- 5. PERMISOS DE ACCESO (GRANT A ANON Y AUTHENTICATED)
 -- ------------------------------------------------------------------------------
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.usuarios TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.directorio_colegas TO anon, authenticated, service_role;
 
 -- ------------------------------------------------------------------------------
--- 5. POLÍTICAS DE SEGURIDAD (ROW LEVEL SECURITY)
+-- 6. NUEVAS POLÍTICAS RLS LIMPIAS (Acceso Total para la Aplicación)
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Permitir todo en usuarios" ON public.usuarios;
@@ -91,7 +116,7 @@ CREATE POLICY "Permitir todo en directorio"
 ON public.directorio_colegas FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- ------------------------------------------------------------------------------
--- 6. PUBLICACIÓN REALTIME (WebSocket en tiempo real < 1 segundo)
+-- 7. REPLICACIÓN EN TIEMPO REAL
 -- ------------------------------------------------------------------------------
 DO $$
 BEGIN
@@ -109,12 +134,11 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.directorio_colegas;
   END IF;
 EXCEPTION
-  WHEN OTHERS THEN
-    NULL; -- Si ya estaba agregado o permisos no aplican, continuar
+  WHEN OTHERS THEN NULL;
 END $$;
 
 -- ------------------------------------------------------------------------------
--- 7. REGISTRO DE ADMINISTRADORES OFICIALES
+-- 8. REGISTRO DE ADMINISTRADORES OFICIALES
 -- ------------------------------------------------------------------------------
 INSERT INTO public.usuarios (id, nombre, correo, telefono, rol, condicion, centro, sector, estado, verificada, fechaRegistro, avatar)
 VALUES 
