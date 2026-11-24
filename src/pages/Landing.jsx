@@ -367,22 +367,19 @@ export default function Landing() {
       verificada: user?.rol === 'admin' ? true : !!newCard.verificada
     };
 
-    // 1. Actualizar estado y sincronizar en localStorage inmediatamente (tiempo real garantizado)
-    setMentorCards((prev) => {
-      const updated = [cardWithStatus, ...prev.filter((c) => c.id !== cardWithStatus.id)];
-      try {
-        localStorage.setItem('directorio_colegas', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-      return updated;
-    });
+    // 1. Actualizar estado y sincronizar en localStorage de inmediato
+    const updatedCards = [cardWithStatus, ...mentorCards.filter((c) => c.id !== cardWithStatus.id)];
+    setMentorCards(updatedCards);
+    try {
+      localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
+    } catch (e) {
+      console.error(e);
+    }
     setCurrentPage(1);
 
     // 2. Sincronizar en lista de usuarias registradas
-    setRegisteredUsers((prev) => {
-      const exists = prev.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
-      if (exists) return prev;
+    const exists = registeredUsers.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
+    if (!exists) {
       const newUserFromCard = {
         id: 'usr_' + Date.now(),
         nombre: cardWithStatus.nombre,
@@ -396,17 +393,14 @@ export default function Landing() {
         verificada: !!cardWithStatus.verificada,
         fechaRegistro: new Date().toLocaleDateString('es-PE')
       };
-      const updatedUsers = cleanAndMergeUsers([...prev, newUserFromCard]);
+      const updatedUsers = cleanAndMergeUsers([...registeredUsers, newUserFromCard]);
+      setRegisteredUsers(updatedUsers);
       try {
         localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
       } catch (e) {
         console.error(e);
       }
-      return updatedUsers;
-    });
-
-    window.dispatchEvent(new Event('sisnets_directorio_updated'));
-    window.dispatchEvent(new Event('sisnets_users_updated'));
+    }
 
     Swal.fire({
       icon: 'success',
@@ -503,21 +497,18 @@ export default function Landing() {
   };
 
   const handleUpdateUser = (updatedData) => {
-    setRegisteredUsers((prev) => {
-      const updated = prev.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u));
-      try {
-        localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
-      } catch (err) {
-        console.error(err);
-      }
-      return updated;
-    });
+    const updated = registeredUsers.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u));
+    setRegisteredUsers(updated);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
+    } catch (err) {
+      console.error(err);
+    }
 
     // Si la usuaria actualizada es la usuaria activa en sesión, actualizar sesión también
     if (user && (user.id === updatedData.id || user.correo?.toLowerCase() === updatedData.correo?.toLowerCase())) {
       login({ ...user, ...updatedData });
     }
-    window.dispatchEvent(new Event('sisnets_users_updated'));
   };
 
   const handleExportCSV = () => {
@@ -1332,19 +1323,16 @@ export default function Landing() {
         isOpen={isCreateUserModalOpen}
         onClose={() => setIsCreateUserModalOpen(false)}
         onUserCreated={(newUser) => {
-          setRegisteredUsers((prev) => {
-            const ruth = prev.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
-            const luis = prev.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
-            const others = prev.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
-            const updated = [ruth, luis, newUser, ...others];
-            try {
-              localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
-            } catch (err) {
-              console.error(err);
-            }
-            return updated;
-          });
-          window.dispatchEvent(new Event('sisnets_users_updated'));
+          const ruth = registeredUsers.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
+          const luis = registeredUsers.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
+          const others = registeredUsers.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
+          const updated = [ruth, luis, newUser, ...others];
+          setRegisteredUsers(updated);
+          try {
+            localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
+          } catch (err) {
+            console.error(err);
+          }
         }}
         existingUsers={registeredUsers}
       />
