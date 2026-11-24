@@ -162,28 +162,39 @@ export default function Login() {
 
     try {
       // Simulación de latencia de API (Backend SISGEIN)
-      await new Promise((res) => setTimeout(res, 1000));
+      await new Promise((res) => setTimeout(res, 800));
+
+      // Buscar si el usuario existe en el directorio de usuarios del colegio
+      let existingUser = null;
+      try {
+        const rawUsers = localStorage.getItem('usuarios_colegio');
+        const usersList = rawUsers ? JSON.parse(rawUsers) : [];
+        existingUser = usersList.find(u => u.correo?.toLowerCase() === formData.correo?.toLowerCase());
+      } catch (err) {
+        console.error(err);
+      }
 
       const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth');
-      const isAdmin = isRuth || formData.correo.toLowerCase().includes('admin');
+      const isAdmin = isRuth || formData.correo.toLowerCase().includes('admin') || existingUser?.rol === 'admin';
 
       const rawTel = formData.telefono ? formData.telefono.replace(/[^0-9]/g, '') : '';
       const formattedTel = rawTel 
         ? `+51 ${rawTel.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3').trim()}` 
-        : '+51 987 654 321';
+        : (existingUser?.telefono || '+51 987 654 321');
 
       const loggedUser = {
-        id: isRuth ? 'admin_ruth' : (isAdmin ? 'admin_user' : ('ts_' + Date.now())),
-        nombre: isRuth
+        id: existingUser?.id || (isRuth ? 'admin_ruth' : (isAdmin ? 'admin_user' : ('ts_' + Date.now()))),
+        nombre: existingUser?.nombre || (isRuth
           ? 'Ruth Anastacio'
-          : (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Ruth Anastacio'),
+          : (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Colega SISNETS')),
         correo: formData.correo,
-        rol: isAdmin ? 'admin' : (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'Egresada'),
-        centro: mode === 'register' && formData.centroLaboral ? formData.centroLaboral : 'SISNETS (Sede Central)',
-        apoyo: mode === 'register' && formData.areaApoyo ? formData.areaApoyo : 'Gestión institucional y convenios',
-        telefono: mode === 'register' ? formattedTel : '+51 987 654 321',
-        avatar: '/logo.png',
-        metodo: 'Credenciales Directas'
+        rol: isAdmin ? 'admin' : (existingUser?.rol || (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'colegiada')),
+        centro: existingUser?.centro || (mode === 'register' && formData.centroLaboral ? formData.centroLaboral : 'SISNETS (Sede Central)'),
+        apoyo: existingUser?.apoyo || (mode === 'register' && formData.areaApoyo ? formData.areaApoyo : 'Gestión institucional y convenios'),
+        telefono: formattedTel,
+        avatar: existingUser?.avatar || '/logo.png',
+        metodo: 'Credenciales Directas',
+        debeCambiarPassword: existingUser?.debeCambiarPassword || false
       };
 
       if (mode === 'register') {

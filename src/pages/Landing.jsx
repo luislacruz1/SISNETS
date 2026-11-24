@@ -16,7 +16,9 @@ import {
   RotateCw,
   Check,
   Building2,
-  GraduationCap
+  GraduationCap,
+  Crown,
+  UserX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
@@ -24,6 +26,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../context/AuthContext';
 import AuthSection from '../components/AuthSection';
 import PublishSupportModal from '../components/PublishSupportModal';
+import CreateUserModal from '../components/admin/CreateUserModal';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import ColleagueCard from '../components/directory/ColleagueCard';
@@ -61,6 +64,34 @@ const FILTER_OPTIONS = [
   }
 ];
 
+// Opciones del selector desplegable para usuarios
+const USER_FILTER_OPTIONS = [
+  {
+    id: 'todos',
+    label: 'Todos los Miembros',
+    sublabel: 'Comunidad completa',
+    icon: Users,
+    badgeColor: 'bg-slate-100 dark:bg-slate-800 text-[#0A1128] dark:text-cyan-400 border-slate-200 dark:border-slate-700',
+    activeColor: 'text-[#0A1128] dark:text-cyan-400'
+  },
+  {
+    id: 'admin',
+    label: 'Administradoras',
+    sublabel: 'Gestión y control de red',
+    icon: Crown,
+    badgeColor: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/40',
+    activeColor: 'text-amber-600 dark:text-amber-400'
+  },
+  {
+    id: 'suspendidas',
+    label: 'Cuentas Pausadas',
+    sublabel: 'Acceso suspendido temporal',
+    icon: UserX,
+    badgeColor: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/40',
+    activeColor: 'text-rose-600 dark:text-rose-400'
+  }
+];
+
 export default function Landing() {
   const { user, logout } = useAuth();
 
@@ -70,6 +101,7 @@ export default function Landing() {
   const [selectedFilter, setSelectedFilter] = useState('Todos');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Control del Panel de Navegación y Vistas Administrativas
@@ -764,11 +796,11 @@ export default function Landing() {
             {/* 2. CABECERA DE PÁGINA (ESTILO SISGEIN) */}
             <div className="bg-white dark:bg-slate-900/90 p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800 shadow-sm relative z-20 backdrop-blur-md">
               <div className="w-full flex flex-col gap-4">
-                {/* Fila Superior: Título + Botones de Acción (desplazado a la derecha en celular) */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-3.5 sm:pl-0">
+                {/* Fila Superior: Título + Botones de Acción (con margen armónico a la derecha) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-4 sm:pl-6">
                   {/* Icono Squircle Marino + Título + Subtítulo */}
-                  <div className="flex items-center gap-3.5 sm:gap-4">
-                    <div className="w-12 h-12 bg-[#0A1128] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#0A1128]/15 shrink-0">
+                  <div className="flex items-center gap-3.5 sm:gap-4 sm:ml-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#0A1128]/20 shrink-0 border border-white/10">
                       {adminTab === 'directorio' ? (
                         <BookUser size={22} />
                       ) : adminTab === 'usuarios' ? (
@@ -813,36 +845,54 @@ export default function Landing() {
 
                     <button
                       type="button"
-                      onClick={() => setIsPublishModalOpen(true)}
-                      className="bg-[#0A1128] hover:bg-[#131f42] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2"
-                      title={adminTab === 'usuarios' ? 'Registrar Colegiada' : 'Registrar Directorio'}
+                      onClick={() => {
+                        if (adminTab === 'usuarios') {
+                          setIsCreateUserModalOpen(true);
+                        } else {
+                          setIsPublishModalOpen(true);
+                        }
+                      }}
+                      className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
+                      title={adminTab === 'usuarios' ? 'Registrar Usuario' : 'Registrar Directorio'}
                     >
-                      <Plus size={18} /> {adminTab === 'usuarios' ? 'Registrar Colegiada' : 'Registrar Directorio'}
+                      <Plus size={18} /> {adminTab === 'usuarios' ? 'Registrar Usuario' : 'Registrar Directorio'}
                     </button>
                   </div>
                 </div>
 
                 {/* BARRA DE FILTROS (BÚSQUEDA SUAVE + DESPLEGABLE MODERNO) */}
-                {(adminTab === 'directorio' || user.rol !== 'admin') && (
+                {adminTab !== 'metricas' && (
                   <div className="flex flex-col sm:flex-row gap-3 mt-1">
                     <div className="relative flex-1 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0A1128] dark:group-focus-within:text-blue-400 transition-colors" size={20} />
                       <input
                         type="text"
-                        placeholder="Buscar en el directorio..."
-                        value={searchTerm}
+                        placeholder={
+                          adminTab === 'usuarios'
+                            ? 'Buscar colega por nombre, correo o teléfono...'
+                            : 'Buscar en el directorio...'
+                        }
+                        value={adminTab === 'usuarios' ? userSearchTerm : searchTerm}
                         onChange={(e) => {
-                          setSearchTerm(e.target.value);
-                          setCurrentPage(1);
+                          if (adminTab === 'usuarios') {
+                            setUserSearchTerm(e.target.value);
+                          } else {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                          }
                         }}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm rounded-xl pl-12 pr-12 py-3.5 focus:outline-none focus:border-[#0A1128] dark:focus:border-blue-500 focus:ring-1 focus:ring-[#0A1128] dark:focus:ring-blue-500 transition-all shadow-sm placeholder:text-slate-400"
+                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm rounded-xl pl-12 pr-12 focus:outline-none focus:border-[#0A1128] dark:focus:border-blue-500 focus:ring-1 focus:ring-[#0A1128] dark:focus:ring-blue-500 transition-all shadow-sm placeholder:text-slate-400 font-semibold"
                       />
-                      {searchTerm && (
+                      {(adminTab === 'usuarios' ? userSearchTerm : searchTerm) && (
                         <button
                           type="button"
                           onClick={() => {
-                            setSearchTerm('');
-                            setCurrentPage(1);
+                            if (adminTab === 'usuarios') {
+                              setUserSearchTerm('');
+                            } else {
+                              setSearchTerm('');
+                              setCurrentPage(1);
+                            }
                           }}
                           className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200/50 dark:bg-slate-700/50 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg transition-all"
                           title="Borrar búsqueda"
@@ -852,16 +902,18 @@ export default function Landing() {
                       )}
                     </div>
 
-                    {/* SELECTOR MODERNO DE CONDICIÓN (ESTILO FLOATING CARD CON ICONOS) */}
+                    {/* SELECTOR MODERNO DE CONDICIÓN / ROL (MISMO GROSOR h-12) */}
                     {(() => {
-                      const currentFilterOption = FILTER_OPTIONS.find((o) => o.id === selectedFilter) || FILTER_OPTIONS[0];
+                      const optionsList = adminTab === 'usuarios' ? USER_FILTER_OPTIONS : FILTER_OPTIONS;
+                      const currentVal = adminTab === 'usuarios' ? userFilterRole : selectedFilter;
+                      const currentFilterOption = optionsList.find((o) => o.id === currentVal) || optionsList[0];
                       const ActiveIcon = currentFilterOption.icon;
                       return (
                         <div className="relative shrink-0 sm:w-60">
                           <button
                             type="button"
                             onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
-                            className="w-full py-3.5 pl-3.5 pr-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-all select-none active:scale-[0.99] group"
+                            className="w-full h-12 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-all select-none active:scale-[0.99] group"
                             aria-expanded={isFilterDropdownOpen}
                             aria-haspopup="listbox"
                           >
@@ -887,19 +939,23 @@ export default function Landing() {
                               />
                               <div className="absolute left-0 right-0 sm:left-auto sm:right-0 top-full mt-2 sm:w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl shadow-slate-900/15 dark:shadow-black/60 p-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
                                 <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                                  Filtrar por condición
+                                  {adminTab === 'usuarios' ? 'Filtrar por rol' : 'Filtrar por condición'}
                                 </div>
                                 <div className="space-y-1">
-                                  {FILTER_OPTIONS.map((opt) => {
-                                    const isSelected = selectedFilter === opt.id;
+                                  {optionsList.map((opt) => {
+                                    const isSelected = currentVal === opt.id;
                                     const OptIcon = opt.icon;
                                     return (
                                       <button
                                         key={opt.id}
                                         type="button"
                                         onClick={() => {
-                                          setSelectedFilter(opt.id);
-                                          setCurrentPage(1);
+                                          if (adminTab === 'usuarios') {
+                                            setUserFilterRole(opt.id);
+                                          } else {
+                                            setSelectedFilter(opt.id);
+                                            setCurrentPage(1);
+                                          }
                                           setIsFilterDropdownOpen(false);
                                         }}
                                         className={`w-full px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer active:scale-[0.98] ${
@@ -908,7 +964,7 @@ export default function Landing() {
                                             : 'hover:bg-slate-50 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-300 font-medium'
                                         }`}
                                       >
-                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${opt.badgeColor}`}>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${opt.badgeColor}`}>
                                           <OptIcon size={16} />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -920,7 +976,7 @@ export default function Landing() {
                                           </span>
                                         </div>
                                         {isSelected && (
-                                          <Check size={16} className={`shrink-0 ml-1.5 ${opt.activeColor}`} />
+                                          <Check size={16} className={`shrink-0 ml-1.5 ${opt.activeColor || 'text-blue-600'}`} />
                                         )}
                                       </button>
                                     );
@@ -1134,6 +1190,7 @@ export default function Landing() {
                   handleToggleUserStatus={handleToggleUserStatus}
                   handleDeleteUser={handleDeleteUser}
                   handleUpdateUser={handleUpdateUser}
+                  onOpenCreateModal={() => setIsCreateUserModalOpen(true)}
                 />
               )}
 
@@ -1169,6 +1226,16 @@ export default function Landing() {
         isOpen={isPublishModalOpen}
         onClose={() => setIsPublishModalOpen(false)}
         onPublish={handleAddNewSupport}
+      />
+
+      {/* MODAL PARA REGISTRAR USUARIO (ADMIN) */}
+      <CreateUserModal
+        isOpen={isCreateUserModalOpen}
+        onClose={() => setIsCreateUserModalOpen(false)}
+        onUserCreated={(newUser) => {
+          setRegisteredUsers((prev) => [newUser, ...prev]);
+        }}
+        existingUsers={registeredUsers}
       />
 
     </div>

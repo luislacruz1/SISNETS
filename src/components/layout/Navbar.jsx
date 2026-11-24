@@ -51,7 +51,7 @@ export default function Navbar({
 
         {/* Avatar Squircle con Iniciales (Informativo, la sesión se cierra desde el Sidebar) */}
         <div
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0A1128] dark:bg-[#101a3b] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-md shrink-0 border border-white/10 select-none"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-md shrink-0 border border-white/15 select-none"
           title={user?.nombre}
         >
           {getUserInitials(user?.nombre)}

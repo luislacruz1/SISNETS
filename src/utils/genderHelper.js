@@ -82,3 +82,29 @@ export function getEgresadaBadgeText(cardOrName, condicion) {
   
   return isMasculineName(cardOrName) ? 'EGRESADO' : 'EGRESADA';
 }
+
+/**
+ * Convierte un nombre completo a formato Título (iniciales mayúsculas),
+ * preservando y estandarizando prefijos profesionales comunes (Lic., Mg., Dr., etc.)
+ * y manteniendo en minúscula las preposiciones en apellidos compuestos.
+ */
+export function formatTitleCase(str) {
+  if (!str || typeof str !== 'string') return '';
+  const prepositions = new Set(['de', 'la', 'del', 'los', 'las', 'y', 'e', 'da', 'di', 'von', 'van']);
+  return str
+    .trim()
+    .split(/\s+/)
+    .map((word, idx) => {
+      const lower = word.toLowerCase();
+      if (lower === 'mg.' || lower === 'mg') return 'Mg.';
+      if (lower === 'lic.' || lower === 'lic') return 'Lic.';
+      if (lower === 'dr.' || lower === 'dr') return 'Dr.';
+      if (lower === 'dra.' || lower === 'dra') return 'Dra.';
+      if (lower === 'bach.' || lower === 'bach') return 'Bach.';
+      if (lower === 'prof.' || lower === 'prof') return 'Prof.';
+      if (lower === 'ing.' || lower === 'ing') return 'Ing.';
+      if (idx > 0 && prepositions.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}

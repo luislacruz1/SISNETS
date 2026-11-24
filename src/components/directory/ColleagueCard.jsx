@@ -1,18 +1,33 @@
 import React from 'react';
 import {
-  GraduationCap,
+  User,
   Building2,
   Briefcase,
-  Sparkles,
-  CheckCircle2,
   Phone,
   MessageSquare,
   MoreVertical,
   Edit3,
-  Trash2
+  Trash2,
+  Check
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { isMasculineName } from '../../utils/genderHelper';
+import { isMasculineName, formatTitleCase } from '../../utils/genderHelper';
+
+// Limpia el texto para que use mayúsculas/minúsculas naturales y sin "PUEDO"
+const formatFortalezaText = (text) => {
+  if (!text) return '';
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^puedo\s+/i, '');
+  cleaned = cleaned.replace(/^puedo\s+dar\s+/i, 'Dar ');
+  cleaned = cleaned.replace(/^puedo\s+compartir\s+/i, 'Compartir ');
+  cleaned = cleaned.replace(/^puedo\s+ser\s+/i, 'Ser ');
+  cleaned = cleaned.replace(/^puedo\s+apoyar\s+en\s+/i, 'Apoyo en ');
+
+  if (cleaned === cleaned.toUpperCase()) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+  }
+  return cleaned;
+};
 
 export default function ColleagueCard({
   card,
@@ -24,202 +39,189 @@ export default function ColleagueCard({
   handleContactClick
 }) {
   const isPracticante = card.condicion === 'practicante' || card.tipo?.toLowerCase().includes('practicante');
-  const Icon = isPracticante ? GraduationCap : Building2;
-  const fortalezasList = Array.isArray(card.fortalezas) && card.fortalezas.length > 0
+  const hasPhoto = Boolean(card.avatar && card.avatar !== '/logo.png' && card.avatar !== '/logo.svg');
+
+  const rawFortalezas = Array.isArray(card.fortalezas) && card.fortalezas.length > 0
     ? card.fortalezas
     : (card.apoyo ? card.apoyo.split(' · ') : []);
+
+  const fortalezasList = rawFortalezas.map(formatFortalezaText).filter(Boolean);
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 18, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96, y: -10 }}
-      transition={{ 
-        duration: 0.24, 
-        ease: [0.25, 0.1, 0.25, 1],
-        layout: { duration: 0.28, ease: 'easeOut' }
-      }}
-      whileHover={{ 
-        y: -6, 
-        transition: { type: 'spring', stiffness: 380, damping: 25 } 
-      }}
-      className="relative p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-400/80 dark:hover:border-cyan-500/80 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 transition-colors flex flex-col h-full group"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.22 }}
+      className="relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-[#1E2B58]/40 dark:hover:border-slate-600 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group overflow-hidden"
     >
-      {/* Barra superior de acento dinámico interactivo con esquinas redondeadas */}
-      <div className={`absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ${
-        isPracticante 
-          ? 'from-violet-500 via-indigo-500 to-cyan-400' 
-          : 'from-fuchsia-500 via-pink-500 to-rose-400'
-      }`} />
+      {/* Línea superior con gradiente igual al color del sidebar */}
+      <div
+        className="absolute top-0 left-0 right-0 h-1.5 rounded-t-3xl bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] dark:from-slate-600 dark:to-slate-700"
+      />
 
-      {/* 1. Encabezado: Avatar con micro-animación, Nombre, Condición y Menú de Opciones */}
-      <div className="flex items-start justify-between gap-2.5 sm:gap-3 min-h-[50px] sm:min-h-[56px] mb-3 sm:mb-4 relative">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold border-2 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 shrink-0 shadow-lg ${
-            isPracticante
-              ? 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-violet-500/35 border-violet-300/50 group-hover:shadow-violet-500/60'
-              : 'bg-gradient-to-br from-fuchsia-500 to-pink-600 text-white shadow-fuchsia-500/35 border-fuchsia-300/50 group-hover:shadow-fuchsia-500/60'
-          }`}>
-            <Icon size={19} className="sm:w-[22px] sm:h-[22px] transition-transform duration-300 group-hover:scale-105" />
-          </div>
-          <div className="min-w-0">
-            <h4 className="font-black text-sm sm:text-base text-[#0A1128] dark:text-white uppercase leading-tight truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-              {card.nombre}
-            </h4>
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
-              {isPracticante ? (
-                <>
-                  <span className="px-2 sm:px-2.5 py-0.5 rounded-md bg-violet-600 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm shadow-violet-500/25">
-                    Practicante
-                  </span>
-                  {card.cicloEstudio && (
-                    <span className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-950 dark:bg-violet-950/70 dark:text-violet-300 border border-violet-300 dark:border-violet-700 text-[9px] sm:text-[10px] font-black">
-                      {card.cicloEstudio}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="px-2 sm:px-2.5 py-0.5 rounded-md bg-gradient-to-r from-fuchsia-500 to-pink-600 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm shadow-fuchsia-500/25">
-                  {card.tipo === 'Egresado' || isMasculineName(card.nombre) ? 'Egresado' : 'Egresada'}
+      <div>
+        {/* 1. CABECERA: Avatar (Persona/Foto), Nombre con Badge al lado en el mismo renglón, y Menú Admin */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            {/* Avatar: Foto de perfil o silueta de Persona con color del Sidebar */}
+            {hasPhoto ? (
+              <img
+                src={card.avatar}
+                alt={card.nombre}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+                className="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-md ring-2 ring-[#1E2B58]/30 dark:ring-slate-700 transition-all"
+              />
+            ) : (
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md transition-transform duration-300 group-hover:scale-105 bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white shadow-[#0A1128]/20 ring-1 ring-white/15"
+              >
+                <User size={22} className="stroke-[2.2]" />
+              </div>
+            )}
+
+            {/* Nombre y Badge de Condición INLINE directamente al lado del último apellido */}
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm sm:text-base text-[#0A1128] dark:text-white leading-snug break-words transition-colors">
+                <span className="font-black group-hover:text-[#1E2B58] dark:group-hover:text-cyan-400">
+                  {formatTitleCase(card.nombre)}
                 </span>
+                {/* Badge pegado al texto como inline-block con color Azul Encendido */}
+                <span
+                  className="inline-block ml-1.5 px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider align-middle whitespace-nowrap shadow-xs bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-blue-500/25"
+                >
+                  {isPracticante ? 'Practicante' : (card.tipo === 'Egresado' || isMasculineName(card.nombre) ? 'Egresado' : 'Egresada')}
+                </span>
+                {isPracticante && card.cicloEstudio && (
+                  <span className="inline-block ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold align-middle whitespace-nowrap bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    {card.cicloEstudio}
+                  </span>
+                )}
+              </h4>
+            </div>
+          </div>
+
+          {/* Menú de Opciones para Administradora */}
+          {user?.rol === 'admin' && (
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setOpenMenuCardId(openMenuCardId === card.id ? null : card.id)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition"
+                title="Opciones"
+              >
+                <MoreVertical size={16} />
+              </button>
+
+              {openMenuCardId === card.id && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setOpenMenuCardId(null)}
+                  />
+                  <div className="absolute right-0 top-9 w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 py-1.5 z-40 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenMenuCardId(null);
+                        handleEditCard(card);
+                      }}
+                      className="w-full px-3 py-2 text-left font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition"
+                    >
+                      <Edit3 size={13} className="text-amber-500" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenMenuCardId(null);
+                        handleDeleteCard(card);
+                      }}
+                      className="w-full px-3 py-2 text-left font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 transition"
+                    >
+                      <Trash2 size={13} />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </>
               )}
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Menú de 3 Puntos Discreto para Administradora */}
-        {user?.rol === 'admin' && (
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setOpenMenuCardId(openMenuCardId === card.id ? null : card.id)}
-              className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition active:scale-90"
-              title="Opciones de ficha"
-            >
-              <MoreVertical size={16} />
-            </button>
+        {/* 2. DATOS LABORALES (Líneas limpias e íconos con color definido del Sidebar) */}
+        <div className="py-2.5 border-y border-slate-100 dark:border-slate-800/80 space-y-1.5 text-xs mb-3.5">
+          {/* Centro Laboral */}
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
+            <div className="w-5 h-5 rounded-lg bg-[#1E2B58]/10 dark:bg-slate-800 text-[#1E2B58] dark:text-cyan-400 flex items-center justify-center shrink-0">
+              <Building2 size={13} />
+            </div>
+            <span className="font-bold truncate">{card.institucion}</span>
+          </div>
 
-            {openMenuCardId === card.id && (
-              <>
-                <div
-                  className="fixed inset-0 z-30"
-                  onClick={() => setOpenMenuCardId(null)}
-                />
-                <div className="absolute right-0 top-9 w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 py-1.5 z-40 text-xs animate-in fade-in zoom-in-95 duration-100">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenMenuCardId(null);
-                      handleEditCard(card);
-                    }}
-                    className="w-full px-3 py-2 text-left font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition"
-                  >
-                    <Edit3 size={13} className="text-amber-500" />
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenMenuCardId(null);
-                      handleDeleteCard(card);
-                    }}
-                    className="w-full px-3 py-2 text-left font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 transition"
-                  >
-                    <Trash2 size={13} />
-                    <span>Eliminar</span>
-                  </button>
+          {/* Cargo que ocupa */}
+          {card.cargo && (
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-[11.5px]">
+              <div className="w-5 h-5 rounded-lg bg-[#1E2B58]/10 dark:bg-slate-800 text-[#1E2B58] dark:text-cyan-400 flex items-center justify-center shrink-0">
+                <Briefcase size={13} />
+              </div>
+              <span className="font-semibold truncate">{card.cargo}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 3. ÁREAS DE ORIENTACIÓN (Minimalista con viñetas sutiles) */}
+        <div className="mb-4">
+          <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+            Orientación y Apoyo:
+          </span>
+          <div className="space-y-1.5">
+            {fortalezasList.slice(0, 3).map((f, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 leading-snug"
+              >
+                <div className="w-4 h-4 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check size={11} strokeWidth={3} />
                 </div>
-              </>
-            )}
+                <span>{f}</span>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-
-      {/* 2. Centro Laboral y Cargo Actual */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 mb-3 sm:mb-4 border border-slate-200/70 dark:border-slate-700/70 shadow-2xs space-y-2.5">
-        {/* Institución */}
-        <div className="flex items-start gap-2.5 min-w-0">
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs ${
-            isPracticante
-              ? 'bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-300 border-violet-200/60 dark:border-violet-800/40'
-              : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/40'
-          }`}>
-            {isPracticante ? <GraduationCap size={15} /> : <Building2 size={15} />}
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="block text-[9.5px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 leading-none">
-              {isPracticante ? 'Centro de Prácticas' : 'Centro Laboral Actual'}
-            </span>
-            <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white leading-snug line-clamp-2 mt-1">
-              {card.institucion}
-            </p>
-          </div>
-        </div>
-
-        {/* Cargo si existe */}
-        {card.cargo && (
-          <div className="flex items-start gap-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/60 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-200/60 dark:border-cyan-800/40 shadow-2xs">
-              <Briefcase size={14} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="block text-[9.5px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 leading-none">
-                Cargo que Ocupa
-              </span>
-              <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-200 leading-snug truncate mt-1">
-                {card.cargo}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Fortalezas estructuradas con microinteracciones dinámicas */}
-      <div className="mb-3 sm:mb-4">
-        <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-transparent border-l-4 border-l-cyan-500 border border-cyan-400/30 text-cyan-900 dark:text-cyan-300 font-black text-[10px] sm:text-[11px] uppercase tracking-wider mb-2 sm:mb-2.5 shadow-sm">
-          <Sparkles size={13} className="text-cyan-500 shrink-0 animate-pulse" />
-          <span>En qué te puede orientar y apoyar:</span>
-        </div>
-        <div className="max-h-[160px] overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-          {fortalezasList.map((f, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 text-[10.5px] sm:text-[11px] font-bold bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 p-2 sm:p-2.5 rounded-xl border border-cyan-500/30 shadow-2xs leading-snug hover:border-cyan-400 hover:bg-cyan-50/50 dark:hover:bg-slate-800/95 transition-colors duration-150 cursor-default"
-            >
-              <CheckCircle2 size={14} className="text-cyan-500 shrink-0 mt-0.5 group-hover:text-cyan-400 transition-colors" />
-              <span className="line-clamp-2">{f}</span>
-            </div>
-          ))}
         </div>
       </div>
 
-      {/* 4. Bloque Inferior Pinned al Fondo: Tarjeta WhatsApp Directo con Efectos Reactivos */}
-      <div className="mt-auto space-y-2 sm:space-y-2.5 pt-1 sm:pt-2">
+      {/* 4. BOTÓN WHATSAPP DIRECTO (Diseño exacto de la captura) */}
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
         <motion.button
           type="button"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => handleContactClick(card)}
-          className="w-full p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/5 hover:from-emerald-500/25 hover:to-teal-500/20 border-2 border-emerald-500/70 hover:border-emerald-500 dark:border-emerald-400/80 dark:hover:border-emerald-400 flex items-center justify-between gap-2 shadow-sm hover:shadow-lg hover:shadow-emerald-500/20 transition-all text-left cursor-pointer group/wa relative overflow-hidden"
+          className="w-full p-2.5 sm:p-3 rounded-2xl bg-[#E6F9F3] dark:bg-emerald-950/40 border-2 border-[#10B981] hover:bg-[#D8F5EC] dark:hover:bg-emerald-950/60 flex items-center justify-between gap-2 transition-all shadow-xs group/btn cursor-pointer"
           title={`Abrir WhatsApp directo con ${card.nombre}`}
         >
-          <div className="flex items-center gap-2.5 min-w-0 relative z-10">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/40 shrink-0 group-hover/wa:scale-110 group-hover/wa:rotate-6 transition-all duration-300">
-              <Phone size={14} className="fill-white" />
+          {/* Lado izquierdo: Ícono squircle verde esmeralda y textos */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#00C48C] text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Phone size={15} className="fill-white text-white" />
             </div>
-            <div className="min-w-0">
-              <span className="block text-[8.5px] sm:text-[9px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 leading-none">
+            <div className="text-left min-w-0">
+              <span className="block text-[9px] font-black uppercase tracking-wider text-[#0F766E] dark:text-emerald-400 leading-none">
                 WhatsApp Directo
               </span>
-              <strong className="text-xs sm:text-[13px] font-black text-emerald-950 dark:text-white tracking-wide mt-0.5 block truncate">
+              <span className="text-[13px] font-black text-[#064E3B] dark:text-white tracking-tight leading-snug mt-0.5 block truncate">
                 {card.telefono}
-              </strong>
+              </span>
             </div>
           </div>
-          <span className="px-2.5 py-1 rounded-full bg-emerald-500 group-hover/wa:bg-emerald-600 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm shrink-0 flex items-center gap-1 transition-all group-hover/wa:scale-105 relative z-10">
-            <span>Directo</span>
-            <MessageSquare size={11} className="transition-transform group-hover/wa:translate-x-0.5" />
+
+          {/* Lado derecho: Pastilla verde redondeada DIRECTO */}
+          <span className="px-3 py-1 rounded-full bg-[#00C48C] hover:bg-[#00B07D] text-white text-[10px] font-black uppercase tracking-wider shrink-0 shadow-xs">
+            Directo
           </span>
         </motion.button>
       </div>

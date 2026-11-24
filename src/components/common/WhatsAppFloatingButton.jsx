@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/JuUE97nTCbkBODNWfDYp6m?s=sw&p=a&iam=2';
 
 export default function WhatsAppFloatingButton() {
+  const { user } = useAuth();
   const [showTooltip, setShowTooltip] = useState(true);
+
+  // Si el usuario es administrador, no mostramos el botón flotante en su panel
+  if (user && user.rol === 'admin') {
+    return null;
+  }
 
   return (
     <aside aria-label="Comunidad de WhatsApp" className="fixed bottom-5 right-5 z-[80] flex flex-col items-end gap-2 select-none">
