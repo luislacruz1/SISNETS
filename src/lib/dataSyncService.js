@@ -33,17 +33,23 @@ export const cleanAndMergeUsers = (parsed) => {
     : LUIS_LACRUZ_USER;
 
   // 3. Usuarios reales adicionales
-  const realUsers = parsed.filter(
-    (u) =>
-      u &&
-      typeof u === 'object' &&
-      !FAKE_DEMO_IDS.includes(u.id) &&
-      u.id !== 'admin_ruth' &&
-      u.id !== 'usr_luis_lacruz' &&
-      u.correo?.toLowerCase() !== 'ruthanastacio191202@gmail.com' &&
-      u.correo?.toLowerCase() !== 'luislacruz326@gmail.com' &&
-      u.correo?.toLowerCase() !== 'admin@trabajosocial.org'
-  );
+  const realUsers = parsed
+    .filter(
+      (u) =>
+        u &&
+        typeof u === 'object' &&
+        !FAKE_DEMO_IDS.includes(u.id) &&
+        u.id !== 'admin_ruth' &&
+        u.id !== 'usr_luis_lacruz' &&
+        u.correo?.toLowerCase() !== 'ruthanastacio191202@gmail.com' &&
+        u.correo?.toLowerCase() !== 'luislacruz326@gmail.com' &&
+        u.correo?.toLowerCase() !== 'admin@trabajosocial.org'
+    )
+    .map((u) => ({
+      ...u,
+      fechaRegistro: u.fechaRegistro || u.fecharegistro || new Date().toLocaleDateString('es-PE'),
+      debeCambiarPassword: u.debeCambiarPassword ?? u.debecambiarpassword ?? false
+    }));
 
   return [activeRuth, activeLuis, ...realUsers];
 };
@@ -72,9 +78,9 @@ export const normalizeCard = (c) => {
     nombre: c.nombre || '',
     condicion: c.condicion || 'egresada',
     tipo: c.tipo || 'Colegiada',
-    cicloEstudio: c.cicloEstudio || null,
+    cicloEstudio: c.cicloEstudio || c.cicloestudio || null,
     institucion: c.institucion || '',
-    centroTipo: c.centroTipo || (c.condicion === 'practicante' ? 'Centro de Prácticas' : 'Centro Laboral'),
+    centroTipo: c.centroTipo || c.centrotipo || (c.condicion === 'practicante' ? 'Centro de Prácticas' : 'Centro Laboral'),
     cargo: c.cargo || '',
     sector: c.sector || 'General',
     apoyo: c.apoyo || fortalezas.join(' · '),
