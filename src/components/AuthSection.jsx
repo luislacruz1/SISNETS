@@ -163,7 +163,8 @@ export default function AuthSection({ isOpen, onClose }) {
       }
 
       const isRuth = cleanCorreo === 'ruthanastacio191202@gmail.com' || cleanCorreo.includes('ruthanastacio') || cleanCorreo.includes('ruth');
-      const isAdmin = isRuth || cleanCorreo.includes('admin');
+      const isLuis = cleanCorreo === 'luislacruz326@gmail.com' || cleanCorreo.includes('luislacruz');
+      const isAdmin = isRuth || isLuis || cleanCorreo.includes('admin');
 
       // 1. MODO REGISTRO
       if (mode === 'register') {
@@ -174,7 +175,7 @@ export default function AuthSection({ isOpen, onClose }) {
           return;
         }
 
-        const emailExists = usersList.some((u) => u.correo && u.correo.toLowerCase() === cleanCorreo) || isRuth;
+        const emailExists = usersList.some((u) => u.correo && u.correo.toLowerCase() === cleanCorreo) || isRuth || isLuis;
 
         if (emailExists) {
           Swal.fire({
@@ -251,6 +252,26 @@ export default function AuthSection({ isOpen, onClose }) {
         };
 
         if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'ruthanastacio191202@gmail.com')) {
+          usersList.unshift(targetUser);
+          localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        }
+      } else if (isLuis) {
+        targetUser = {
+          id: 'usr_luis_lacruz',
+          nombre: 'Luis Jhonatan La Cruz Urbano',
+          correo: 'luislacruz326@gmail.com',
+          rol: 'admin',
+          condicion: 'egresada',
+          centro: 'SISNETS (Sede Central)',
+          sector: 'Gestión Institucional',
+          telefono: '+51 958 262 585',
+          estado: 'activa',
+          verificada: true,
+          avatar: '/logo.png',
+          metodo: 'Credenciales Directas'
+        };
+
+        if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'luislacruz326@gmail.com')) {
           usersList.unshift(targetUser);
           localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
         }

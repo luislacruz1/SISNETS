@@ -15,6 +15,21 @@ export const ADMIN_RUTH_USER = {
   fechaRegistro: '01/01/2026'
 };
 
-export const INITIAL_REGISTERED_USERS = [ADMIN_RUTH_USER];
+// Usuario Administrador y Fundador Oficial
+export const LUIS_LACRUZ_USER = {
+  id: 'usr_luis_lacruz',
+  nombre: 'Luis Jhonatan La Cruz Urbano',
+  correo: 'luislacruz326@gmail.com',
+  telefono: '+51 958 262 585',
+  rol: 'admin',
+  condicion: 'egresada',
+  centro: 'SISNETS (Sede Central)',
+  sector: 'Gestión Institucional',
+  estado: 'activa',
+  verificada: true,
+  fechaRegistro: '01/01/2026'
+};
+
+export const INITIAL_REGISTERED_USERS = [ADMIN_RUTH_USER, LUIS_LACRUZ_USER];
 
 export const DEMO_COLEGAS = [];

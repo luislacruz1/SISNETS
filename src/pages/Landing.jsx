@@ -33,7 +33,7 @@ import ColleagueCard from '../components/directory/ColleagueCard';
 import UsersManagement from '../components/admin/UsersManagement';
 import MetricsView from '../components/admin/MetricsView';
 import PublicLanding from '../components/public/PublicLanding';
-import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER } from '../data/demoData';
+import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER, LUIS_LACRUZ_USER } from '../data/demoData';
 import { isMasculineName } from '../utils/genderHelper';
 
 // Opciones del filtro desplegable moderno por condición
@@ -92,10 +92,10 @@ const USER_FILTER_OPTIONS = [
   }
 ];
 
-// Helper maestro para mantener intactos los usuarios registrados y preservar ediciones de Ruth Anastacio
+// Helper maestro para mantener intactos los usuarios registrados y preservar ediciones
 const cleanAndMergeUsers = (parsed) => {
   if (!Array.isArray(parsed) || parsed.length === 0) {
-    return [ADMIN_RUTH_USER];
+    return [ADMIN_RUTH_USER, LUIS_LACRUZ_USER];
   }
 
   // IDs de demo antiguos que deben ser depurados si aún quedan en el almacenamiento
@@ -113,18 +113,28 @@ const cleanAndMergeUsers = (parsed) => {
     ? { ...ADMIN_RUTH_USER, ...storedRuth, rol: 'admin' }
     : ADMIN_RUTH_USER;
 
-  // 2. Extraer todos los usuarios registrados reales creados en el sistema
+  // 2. Buscar a Luis en el almacenamiento para preservar cualquier cambio guardado
+  const storedLuis = parsed.find(
+    (u) => u && (u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com')
+  );
+  const activeLuis = storedLuis
+    ? { ...LUIS_LACRUZ_USER, ...storedLuis, rol: storedLuis.rol || 'admin' }
+    : LUIS_LACRUZ_USER;
+
+  // 3. Extraer todos los usuarios registrados reales creados en el sistema
   const realUsers = parsed.filter(
     (u) =>
       u &&
       typeof u === 'object' &&
       !FAKE_DEMO_IDS.includes(u.id) &&
       u.id !== 'admin_ruth' &&
+      u.id !== 'usr_luis_lacruz' &&
       u.correo?.toLowerCase() !== 'ruthanastacio191202@gmail.com' &&
+      u.correo?.toLowerCase() !== 'luislacruz326@gmail.com' &&
       u.correo?.toLowerCase() !== 'admin@trabajosocial.org'
   );
 
-  return [activeRuth, ...realUsers];
+  return [activeRuth, activeLuis, ...realUsers];
 };
 
 export default function Landing() {
@@ -185,7 +195,7 @@ export default function Landing() {
     } catch (e) {
       console.error(e);
     }
-    return [ADMIN_RUTH_USER];
+    return [ADMIN_RUTH_USER, LUIS_LACRUZ_USER];
   });
 
   // Guardar usuarias en localStorage ante cualquier cambio
@@ -386,7 +396,7 @@ export default function Landing() {
         verificada: !!cardWithStatus.verificada,
         fechaRegistro: new Date().toLocaleDateString('es-PE')
       };
-      const updatedUsers = [prev[0] || ADMIN_RUTH_USER, newUserFromCard, ...prev.slice(1)];
+      const updatedUsers = cleanAndMergeUsers([...prev, newUserFromCard]);
       try {
         localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
       } catch (e) {
@@ -1324,8 +1334,9 @@ export default function Landing() {
         onUserCreated={(newUser) => {
           setRegisteredUsers((prev) => {
             const ruth = prev.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
-            const others = prev.filter((u) => u.id !== ruth.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
-            const updated = [ruth, newUser, ...others];
+            const luis = prev.find((u) => u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com') || LUIS_LACRUZ_USER;
+            const others = prev.filter((u) => u.id !== ruth.id && u.id !== luis.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
+            const updated = [ruth, luis, newUser, ...others];
             try {
               localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
             } catch (err) {

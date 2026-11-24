@@ -103,6 +103,7 @@ export function formatTitleCase(str) {
       if (lower === 'bach.' || lower === 'bach') return 'Bach.';
       if (lower === 'prof.' || lower === 'prof') return 'Prof.';
       if (lower === 'ing.' || lower === 'ing') return 'Ing.';
+      if (lower === 'la' && word === 'La') return 'La';
       if (idx > 0 && prepositions.has(lower)) return lower;
       return lower.charAt(0).toUpperCase() + lower.slice(1);
     })
