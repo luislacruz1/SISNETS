@@ -18,7 +18,9 @@ import {
   Building2,
   GraduationCap,
   Crown,
-  UserX
+  UserX,
+  Star,
+  HeartHandshake
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
@@ -34,6 +36,9 @@ import ColleagueCard from '../components/directory/ColleagueCard';
 import UsersManagement from '../components/admin/UsersManagement';
 import MetricsView from '../components/admin/MetricsView';
 import PublicLanding from '../components/public/PublicLanding';
+import MyProfileView from '../components/member/MyProfileView';
+import SavedContactsView from '../components/member/SavedContactsView';
+import { CommunityBoardView } from '../components/member/CommunityBoardView';
 import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER, LUIS_LACRUZ_USER } from '../data/demoData';
 import { isMasculineName } from '../utils/genderHelper';
 import {
@@ -128,7 +133,7 @@ export default function Landing() {
   const [adminTab, setAdminTabState] = useState(() => {
     try {
       const savedTab = localStorage.getItem('sisnets_active_admin_tab');
-      if (savedTab && ['directorio', 'usuarios', 'metricas'].includes(savedTab)) {
+      if (savedTab && ['directorio', 'usuarios', 'metricas', 'mi-ficha', 'favoritas', 'comunidad'].includes(savedTab)) {
         return savedTab;
       }
     } catch (e) {
@@ -144,6 +149,39 @@ export default function Landing() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // Contactos clave / favoritas guardadas en localStorage
+  const [favoriteIds, setFavoriteIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sisnets_favorite_card_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleToggleFavorite = (card) => {
+    if (!card?.id) return;
+    setFavoriteIds((prev) => {
+      const exists = prev.includes(card.id);
+      const next = exists ? prev.filter((id) => id !== card.id) : [...prev, card.id];
+      try {
+        localStorage.setItem('sisnets_favorite_card_ids', JSON.stringify(next));
+      } catch (e) {}
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: exists ? 'info' : 'success',
+        title: exists ? 'Removida de contactos clave' : 'Guardada en contactos clave',
+        showConfirmButton: false,
+        timer: 1800,
+        timerProgressBar: true
+      });
+
+      return next;
+    });
   };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Control de colapso en escritorio
@@ -998,23 +1036,45 @@ export default function Landing() {
                         <BookUser size={22} />
                       ) : adminTab === 'usuarios' ? (
                         <Users size={22} />
+                      ) : adminTab === 'mi-ficha' ? (
+                        <UserCheck size={22} />
+                      ) : adminTab === 'favoritas' ? (
+                        <Star size={22} className="fill-amber-400 text-amber-400" />
+                      ) : adminTab === 'comunidad' ? (
+                        <HeartHandshake size={22} />
                       ) : (
                         <BarChart3 size={22} />
                       )}
                     </div>
                     <div>
                       <h1 className="text-xl sm:text-2xl font-bold text-[#0A1128] dark:text-slate-100 tracking-tight flex items-center gap-2">
-                        {adminTab === 'directorio' ? 'Directorio' : adminTab === 'usuarios' ? 'Usuarios' : 'Métricas & Reportes'}
+                        {adminTab === 'directorio'
+                          ? 'Directorio'
+                          : adminTab === 'usuarios'
+                            ? 'Usuarios'
+                            : adminTab === 'mi-ficha'
+                              ? 'Mi Ficha Profesional'
+                              : adminTab === 'favoritas'
+                                ? 'Mis Contactos Clave'
+                                : adminTab === 'comunidad'
+                                  ? 'Muro de Alianzas & Apoyo'
+                                  : 'Métricas & Reportes'}
                         <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold px-2.5 py-0.5 rounded-full shrink-0 uppercase tracking-widest">
                           SISNETS
                         </span>
                       </h1>
                       <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                         {adminTab === 'directorio'
-                          ? 'Gestión de Directorios'
+                          ? 'Directorio de Colegas'
                           : adminTab === 'usuarios'
                             ? 'Gestión y validación de miembros de la red'
-                            : 'Indicadores de articulación institucional'}
+                            : adminTab === 'mi-ficha'
+                              ? 'Revisa y mantén actualizada tu presentación y datos de contacto'
+                              : adminTab === 'favoritas'
+                                ? 'Tus colegas guardadas organizadas por sector de intervención'
+                                : adminTab === 'comunidad'
+                                  ? 'Espacio solidario de interconsultas, convocatorias y modelos de informes'
+                                  : 'Indicadores de articulación institucional'}
                       </p>
                     </div>
                   </div>
@@ -1045,25 +1105,47 @@ export default function Landing() {
                       <RotateCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (adminTab === 'usuarios') {
-                          setIsCreateUserModalOpen(true);
-                        } else {
-                          setIsPublishModalOpen(true);
-                        }
-                      }}
-                      className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
-                      title={adminTab === 'usuarios' ? 'Registrar Usuario' : 'Registrar Directorio'}
-                    >
-                      <Plus size={18} /> {adminTab === 'usuarios' ? 'Registrar Usuario' : 'Registrar Directorio'}
-                    </button>
+                    {(adminTab === 'directorio' || adminTab === 'usuarios') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (adminTab === 'usuarios') {
+                            setIsCreateUserModalOpen(true);
+                          } else {
+                            setIsPublishModalOpen(true);
+                          }
+                        }}
+                        className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
+                        title={adminTab === 'usuarios' ? 'Registrar Usuario' : 'Registrar Directorio'}
+                      >
+                        <Plus size={18} /> {adminTab === 'usuarios' ? 'Registrar Usuario' : 'Registrar Directorio'}
+                      </button>
+                    )}
+
+                    {adminTab === 'mi-ficha' && (
+                      <button
+                        type="button"
+                        onClick={() => setIsPublishModalOpen(true)}
+                        className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
+                      >
+                        <Plus size={18} /> Publicar o Editar Mi Ficha
+                      </button>
+                    )}
+
+                    {(adminTab === 'favoritas' || adminTab === 'comunidad') && (
+                      <button
+                        type="button"
+                        onClick={() => setAdminTab('directorio')}
+                        className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
+                      >
+                        <BookUser size={18} /> Explorar Directorio
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {/* BARRA DE FILTROS (BÚSQUEDA SUAVE + DESPLEGABLE MODERNO) */}
-                {adminTab !== 'metricas' && (
+                {(adminTab === 'directorio' || (user?.rol === 'admin' && adminTab === 'usuarios')) && (
                   <div className="flex flex-col sm:flex-row gap-3 mt-1">
                     <div className="relative flex-1 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0A1128] dark:group-focus-within:text-blue-400 transition-colors" size={20} />
@@ -1197,8 +1279,8 @@ export default function Landing() {
 
             {/* 3. CONTENIDO PRINCIPAL POR TAB */}
             <div className="py-4 sm:py-6 px-3.5 sm:px-8 w-full space-y-4 sm:space-y-6 flex-1">
-              {/* BANNER "MI FICHA" (Para Colegiadas No-Admin) */}
-              {user.rol !== 'admin' && (
+              {/* BANNER "MI FICHA" (Solo en vista de Directorio para Colegiadas No-Admin) */}
+              {adminTab === 'directorio' && user.rol !== 'admin' && (
                 miFicha ? (
                   <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-transparent border-2 border-cyan-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
                     <div className="flex items-center gap-3 min-w-0">
@@ -1260,7 +1342,7 @@ export default function Landing() {
               )}
 
               {/* TAB 1: DIRECTORIO VIVO DE COLEGAS CON ANIMACIÓN DINÁMICA */}
-              {(adminTab === 'directorio' || user.rol !== 'admin') && (
+              {adminTab === 'directorio' && (
                 <div className="space-y-4 sm:space-y-6">
                   {filteredCards.length > 0 ? (
                     <motion.div 
@@ -1278,6 +1360,8 @@ export default function Landing() {
                             handleEditCard={handleEditCard}
                             handleDeleteCard={handleDeleteCard}
                             handleContactClick={handleContactClick}
+                            isFavorite={favoriteIds.includes(card.id)}
+                            onToggleFavorite={handleToggleFavorite}
                           />
                         ))}
                       </AnimatePresence>
@@ -1392,6 +1476,38 @@ export default function Landing() {
                 <MetricsView
                   metricsData={metricsData}
                   handleExportCSV={handleExportCSV}
+                />
+              )}
+
+              {/* TAB 4 (MIEMBRO): MI FICHA PROFESIONAL */}
+              {adminTab === 'mi-ficha' && (
+                <MyProfileView
+                  user={user}
+                  miFicha={miFicha}
+                  onOpenPublishModal={() => {
+                    if (miFicha) {
+                      handleEditCard(miFicha);
+                    } else {
+                      setIsPublishModalOpen(true);
+                    }
+                  }}
+                />
+              )}
+
+              {/* TAB 5 (MIEMBRO): CONTACTOS CLAVE / FAVORITAS */}
+              {adminTab === 'favoritas' && (
+                <SavedContactsView
+                  mentorCards={mentorCards}
+                  favoriteIds={favoriteIds}
+                  onToggleFavorite={handleToggleFavorite}
+                  onNavigateToDirectorio={() => setAdminTab('directorio')}
+                />
+              )}
+
+              {/* TAB 6 (MIEMBRO): MURO DE ALIANZAS & APOYO */}
+              {adminTab === 'comunidad' && (
+                <CommunityBoardView
+                  currentUser={user}
                 />
               )}
             </div>

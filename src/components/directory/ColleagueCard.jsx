@@ -8,7 +8,8 @@ import {
   MoreVertical,
   Edit3,
   Trash2,
-  Check
+  Check,
+  Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { isMasculineName, formatTitleCase } from '../../utils/genderHelper';
@@ -36,7 +37,9 @@ export default function ColleagueCard({
   setOpenMenuCardId,
   handleEditCard,
   handleDeleteCard,
-  handleContactClick
+  handleContactClick,
+  isFavorite = false,
+  onToggleFavorite
 }) {
   const isPracticante = card.condicion === 'practicante' || card.tipo?.toLowerCase().includes('practicante');
   const hasPhoto = Boolean(card.avatar && card.avatar !== '/logo.png' && card.avatar !== '/logo.svg');
@@ -104,52 +107,73 @@ export default function ColleagueCard({
             </div>
           </div>
 
-          {/* Menú de Opciones para Administradora */}
-          {user?.rol === 'admin' && (
-            <div className="relative shrink-0">
+          {/* Acciones de cabecera: Favorito / Menú Admin */}
+          <div className="flex items-center gap-1 shrink-0">
+            {onToggleFavorite && (
               <button
                 type="button"
-                onClick={() => setOpenMenuCardId(openMenuCardId === card.id ? null : card.id)}
-                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition"
-                title="Opciones"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(card);
+                }}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                  isFavorite
+                    ? 'text-amber-500 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                    : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+                title={isFavorite ? 'Quitar de contactos clave' : 'Guardar en contactos clave'}
               >
-                <MoreVertical size={16} />
+                <Star size={16} className={isFavorite ? 'fill-amber-500' : ''} />
               </button>
+            )}
 
-              {openMenuCardId === card.id && (
-                <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setOpenMenuCardId(null)}
-                  />
-                  <div className="absolute right-0 top-9 w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 py-1.5 z-40 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpenMenuCardId(null);
-                        handleEditCard(card);
-                      }}
-                      className="w-full px-3 py-2 text-left font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition"
-                    >
-                      <Edit3 size={13} className="text-amber-500" />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpenMenuCardId(null);
-                        handleDeleteCard(card);
-                      }}
-                      className="w-full px-3 py-2 text-left font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 transition"
-                    >
-                      <Trash2 size={13} />
-                      <span>Eliminar</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+            {/* Menú de Opciones para Administradora */}
+            {user?.rol === 'admin' && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpenMenuCardId(openMenuCardId === card.id ? null : card.id)}
+                  className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition"
+                  title="Opciones"
+                >
+                  <MoreVertical size={16} />
+                </button>
+
+                {openMenuCardId === card.id && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setOpenMenuCardId(null)}
+                    />
+                    <div className="absolute right-0 top-9 w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 py-1.5 z-40 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenMenuCardId(null);
+                          handleEditCard(card);
+                        }}
+                        className="w-full px-3 py-2 text-left font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition"
+                      >
+                        <Edit3 size={13} className="text-amber-500" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenMenuCardId(null);
+                          handleDeleteCard(card);
+                        }}
+                        className="w-full px-3 py-2 text-left font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 transition"
+                      >
+                        <Trash2 size={13} />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 2. DATOS LABORALES (Líneas limpias e íconos con color definido del Sidebar) */}
