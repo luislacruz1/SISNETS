@@ -152,7 +152,7 @@ export default function AuthSection({ isOpen, onClose }) {
     try {
       await new Promise((res) => setTimeout(res, 800));
 
-      const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth');
+      const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth') || formData.correo.toLowerCase() === 'ruthanastacio191202@gmail.com';
       const isAdmin = isRuth || formData.correo.toLowerCase().includes('admin');
 
       const rawTel = formData.telefono ? formData.telefono.replace(/[^0-9]/g, '') : '';
@@ -165,9 +165,9 @@ export default function AuthSection({ isOpen, onClose }) {
         nombre: isRuth
           ? 'Ruth Anastacio'
           : (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Ruth Anastacio'),
-        correo: formData.correo,
-        rol: isAdmin ? 'admin' : 'colegiada',
-        cargo: isAdmin ? 'Administradora General' : 'Trabajadora Social',
+        correo: isRuth ? 'ruthanastacio191202@gmail.com' : formData.correo,
+        rol: (isRuth || isAdmin) ? 'admin' : 'colegiada',
+        cargo: (isRuth || isAdmin) ? 'Administradora General' : 'Trabajadora Social',
         centro: 'SISNETS (Sede Central)',
         apoyo: 'Gestión institucional y convenios',
         telefono: mode === 'register' ? formattedTel : '+51 987 654 321',

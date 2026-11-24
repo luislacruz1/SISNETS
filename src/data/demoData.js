@@ -4,7 +4,7 @@
 export const ADMIN_RUTH_USER = {
   id: 'admin_ruth',
   nombre: 'Ruth Anastacio',
-  correo: 'admin@trabajosocial.org',
+  correo: 'ruthanastacio191202@gmail.com',
   telefono: '+51 987 654 321',
   rol: 'admin',
   condicion: 'egresada',

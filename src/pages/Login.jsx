@@ -174,7 +174,7 @@ export default function Login() {
         console.error(err);
       }
 
-      const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth');
+      const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth') || formData.correo.toLowerCase() === 'ruthanastacio191202@gmail.com';
       const isAdmin = isRuth || formData.correo.toLowerCase().includes('admin') || existingUser?.rol === 'admin';
 
       const rawTel = formData.telefono ? formData.telefono.replace(/[^0-9]/g, '') : '';
@@ -183,12 +183,12 @@ export default function Login() {
         : (existingUser?.telefono || '+51 987 654 321');
 
       const loggedUser = {
-        id: existingUser?.id || (isRuth ? 'admin_ruth' : (isAdmin ? 'admin_user' : ('ts_' + Date.now()))),
-        nombre: existingUser?.nombre || (isRuth
+        id: isRuth ? 'admin_ruth' : (existingUser?.id || (isAdmin ? 'admin_user' : ('ts_' + Date.now()))),
+        nombre: isRuth
           ? 'Ruth Anastacio'
-          : (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Colega SISNETS')),
-        correo: formData.correo,
-        rol: isAdmin ? 'admin' : (existingUser?.rol || (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'colegiada')),
+          : (existingUser?.nombre || (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Colega SISNETS')),
+        correo: isRuth ? (formData.correo || 'ruthanastacio191202@gmail.com') : formData.correo,
+        rol: (isRuth || isAdmin) ? 'admin' : (existingUser?.rol || (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'colegiada')),
         centro: existingUser?.centro || (mode === 'register' && formData.centroLaboral ? formData.centroLaboral : 'SISNETS (Sede Central)'),
         apoyo: existingUser?.apoyo || (mode === 'register' && formData.areaApoyo ? formData.areaApoyo : 'Gestión institucional y convenios'),
         telefono: formattedTel,

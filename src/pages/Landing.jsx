@@ -158,7 +158,9 @@ export default function Landing() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const nonDemoUsers = parsed.filter((u) => !isDemoUser(u) && u.id !== 'admin_ruth');
+          const nonDemoUsers = parsed.filter(
+            (u) => !isDemoUser(u) && u.id !== 'admin_ruth' && u.correo !== 'admin@trabajosocial.org'
+          );
           users = [ADMIN_RUTH_USER, ...nonDemoUsers];
         }
       }
