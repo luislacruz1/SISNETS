@@ -22,7 +22,7 @@ export const cleanAndMergeUsers = (parsed) => {
     (u) => u && (u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com')
   );
   const activeRuth = storedRuth
-    ? { ...ADMIN_RUTH_USER, ...storedRuth, rol: 'admin' }
+    ? { ...ADMIN_RUTH_USER, ...storedRuth, rol: storedRuth.rol || 'admin' }
     : ADMIN_RUTH_USER;
 
   // 2. Buscar a Luis
@@ -170,7 +170,7 @@ export const saveRemoteUser = async (user) => {
   }
 };
 
-export const updateRemoteUser = async (userId, partialData) => {
+export const updateRemoteUser = async (userId, partialData, userObject = null) => {
   if (!userId) return false;
   try {
     const sanitizedData = {};
@@ -186,14 +186,31 @@ export const updateRemoteUser = async (userId, partialData) => {
       sanitizedData.password = await hashPassword(sanitizedData.password);
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('usuarios')
       .update(sanitizedData)
-      .eq('id', String(userId));
+      .eq('id', String(userId))
+      .select();
+
     if (error) {
       console.warn('Error actualizando usuario en Supabase:', error.message);
       return false;
     }
+
+    // Si no se encontró por ID pero tenemos el objeto/correo, intentar actualizar por correo o persistir
+    if ((!data || data.length === 0) && userObject?.correo) {
+      const cleanEmail = sanitizeEmail(userObject.correo);
+      const { data: emailData } = await supabase
+        .from('usuarios')
+        .update(sanitizedData)
+        .eq('correo', cleanEmail)
+        .select();
+
+      if (!emailData || emailData.length === 0) {
+        await saveRemoteUser({ ...userObject, ...partialData });
+      }
+    }
+
     return true;
   } catch (err) {
     console.warn('Error en updateRemoteUser:', err);
@@ -201,16 +218,22 @@ export const updateRemoteUser = async (userId, partialData) => {
   }
 };
 
-export const deleteRemoteUser = async (userId) => {
-  if (!userId) return false;
+export const deleteRemoteUser = async (userId, userCorreo = null) => {
+  if (!userId && !userCorreo) return false;
   try {
-    const { error } = await supabase
-      .from('usuarios')
-      .delete()
-      .eq('id', String(userId));
-    if (error) {
-      console.warn('Error eliminando usuario en Supabase:', error.message);
-      return false;
+    if (userId) {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', String(userId))
+        .select();
+      if (!error && data && data.length > 0) return true;
+    }
+    if (userCorreo) {
+      await supabase
+        .from('usuarios')
+        .delete()
+        .eq('correo', sanitizeEmail(userCorreo));
     }
     return true;
   } catch (err) {

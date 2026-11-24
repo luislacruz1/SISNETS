@@ -35,7 +35,8 @@ export default function UsersManagement({
   const [editForm, setEditForm] = useState({
     nombre: '',
     telefono: '',
-    correo: ''
+    correo: '',
+    rol: 'colegiada'
   });
 
   const openEditModal = (u) => {
@@ -43,13 +44,14 @@ export default function UsersManagement({
     setEditForm({
       nombre: u.nombre || '',
       telefono: u.telefono || '',
-      correo: u.correo || ''
+      correo: u.correo || '',
+      rol: (u.rol || 'colegiada').toLowerCase()
     });
   };
 
   const closeEditModal = () => {
     setEditingUser(null);
-    setEditForm({ nombre: '', telefono: '', correo: '' });
+    setEditForm({ nombre: '', telefono: '', correo: '', rol: 'colegiada' });
   };
 
   const handleSaveEdit = (e) => {
@@ -60,7 +62,8 @@ export default function UsersManagement({
       ...editingUser,
       nombre: editForm.nombre.trim() || editingUser.nombre,
       telefono: editForm.telefono.trim() || editingUser.telefono,
-      correo: editForm.correo.trim() || editingUser.correo
+      correo: editForm.correo.trim() || editingUser.correo,
+      rol: editForm.rol || editingUser.rol || 'colegiada'
     };
 
     if (handleUpdateUser) {
@@ -114,7 +117,7 @@ export default function UsersManagement({
         >
           <AnimatePresence mode="popLayout">
             {paginatedUsers.map((u) => {
-              const isAdmin = u.rol === 'admin';
+              const isAdmin = (u.rol || '').toLowerCase() === 'admin';
               const hasPhoto = Boolean(u.avatar && u.avatar !== '/logo.png' && u.avatar !== '/logo.svg');
 
               return (
@@ -512,6 +515,22 @@ export default function UsersManagement({
                     onChange={(e) => setEditForm({ ...editForm, correo: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#1E2B58]/20 focus:border-[#1E2B58] dark:focus:ring-blue-500/30 dark:focus:border-blue-500 transition"
                   />
+                </div>
+
+                {/* Campo: Rol del Usuario (Designar o Quitar Admin) */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                    <Crown size={13} className="text-amber-500" />
+                    <span>Rol en el Sistema</span>
+                  </label>
+                  <select
+                    value={editForm.rol}
+                    onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 px-3.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition cursor-pointer"
+                  >
+                    <option value="colegiada">Colegiada Activa (Acceso Estándar)</option>
+                    <option value="admin">Administradora General (Control Total)</option>
+                  </select>
                 </div>
 
                 {/* Botones de Acción */}

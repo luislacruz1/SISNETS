@@ -106,7 +106,7 @@ const USER_FILTER_OPTIONS = [
 ];
 
 export default function Landing() {
-  const { user, logout, login } = useAuth();
+  const { user, logout, login, updateUser } = useAuth();
 
   // Estados de vista y modales
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -421,12 +421,39 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserRole = (targetUser) => {
+  const handleToggleUserRole = async (targetUser) => {
+    if (!targetUser) return;
     const nuevoRol = targetUser.rol === 'admin' ? 'colegiada' : 'admin';
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === targetUser.id ? { ...u, rol: nuevoRol } : u))
-    );
-    updateRemoteUser(targetUser.id, { rol: nuevoRol });
+
+    // 1. Actualizar estado local inmediatamente
+    const updatedUsers = registeredUsers.map((u) => {
+      const isMatch = (u.id && u.id === targetUser.id) || 
+                      (u.correo && targetUser.correo && u.correo.toLowerCase() === targetUser.correo.toLowerCase());
+      return isMatch ? { ...u, rol: nuevoRol } : u;
+    });
+
+    setRegisteredUsers(updatedUsers);
+
+    // 2. Persistir en localStorage
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 3. Si el usuario actual es el que se está modificando, actualizar AuthContext
+    if (user && (user.id === targetUser.id || user.correo?.toLowerCase() === targetUser.correo?.toLowerCase())) {
+      if (typeof updateUser === 'function') {
+        updateUser({ rol: nuevoRol });
+      }
+    }
+
+    // 4. Actualizar en Supabase
+    const userToSave = { ...targetUser, rol: nuevoRol };
+    await updateRemoteUser(targetUser.id, { rol: nuevoRol }, userToSave);
+
+    // 5. Notificar a toda la aplicación
+    window.dispatchEvent(new Event('sisnets_users_updated'));
 
     Swal.fire({
       icon: 'success',
@@ -440,12 +467,25 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserStatus = (targetUser) => {
+  const handleToggleUserStatus = async (targetUser) => {
+    if (!targetUser) return;
     const nuevoEstado = targetUser.estado === 'activa' ? 'suspendida' : 'activa';
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === targetUser.id ? { ...u, estado: nuevoEstado } : u))
-    );
-    updateRemoteUser(targetUser.id, { estado: nuevoEstado });
+    const updatedUsers = registeredUsers.map((u) => {
+      const isMatch = (u.id && u.id === targetUser.id) || 
+                      (u.correo && targetUser.correo && u.correo.toLowerCase() === targetUser.correo.toLowerCase());
+      return isMatch ? { ...u, estado: nuevoEstado } : u;
+    });
+
+    setRegisteredUsers(updatedUsers);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const userToSave = { ...targetUser, estado: nuevoEstado };
+    await updateRemoteUser(targetUser.id, { estado: nuevoEstado }, userToSave);
+    window.dispatchEvent(new Event('sisnets_users_updated'));
 
     Swal.fire({
       icon: nuevoEstado === 'activa' ? 'success' : 'warning',
@@ -459,11 +499,22 @@ export default function Landing() {
     });
   };
 
-  const handleToggleUserVerify = (targetUser) => {
+  const handleToggleUserVerify = async (targetUser) => {
+    if (!targetUser) return;
     const nuevoEstado = !targetUser.verificada;
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === targetUser.id ? { ...u, verificada: nuevoEstado } : u))
-    );
+    const updatedUsers = registeredUsers.map((u) => {
+      const isMatch = (u.id && u.id === targetUser.id) || 
+                      (u.correo && targetUser.correo && u.correo.toLowerCase() === targetUser.correo.toLowerCase());
+      return isMatch ? { ...u, verificada: nuevoEstado } : u;
+    });
+
+    setRegisteredUsers(updatedUsers);
+    try {
+      localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.error(e);
+    }
+
     setMentorCards((prev) =>
       prev.map((c) => {
         if (c.correo?.toLowerCase() === targetUser.correo?.toLowerCase() || c.nombre === targetUser.nombre) {
@@ -472,8 +523,11 @@ export default function Landing() {
         return c;
       })
     );
-    updateRemoteUser(targetUser.id, { verificada: nuevoEstado });
-    updateRemoteDirectorioCard(targetUser.id, { verificada: nuevoEstado });
+
+    const userToSave = { ...targetUser, verificada: nuevoEstado };
+    await updateRemoteUser(targetUser.id, { verificada: nuevoEstado }, userToSave);
+    await updateRemoteDirectorioCard(targetUser.id, { verificada: nuevoEstado });
+    window.dispatchEvent(new Event('sisnets_users_updated'));
 
     Swal.fire({
       icon: nuevoEstado ? 'success' : 'info',
@@ -497,14 +551,26 @@ export default function Landing() {
       cancelButtonColor: '#0A1128',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
-        setRegisteredUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
-        deleteRemoteUser(targetUser.id);
+        const remaining = registeredUsers.filter((u) => {
+          const isMatch = (u.id && u.id === targetUser.id) || 
+                          (u.correo && targetUser.correo && u.correo.toLowerCase() === targetUser.correo.toLowerCase());
+          return !isMatch;
+        });
+        setRegisteredUsers(remaining);
+        try {
+          localStorage.setItem('usuarios_colegio', JSON.stringify(remaining));
+        } catch (e) {
+          console.error(e);
+        }
+        await deleteRemoteUser(targetUser.id, targetUser.correo);
+        window.dispatchEvent(new Event('sisnets_users_updated'));
+
         Swal.fire({
           icon: 'success',
           title: 'Usuaria Eliminada',
-          text: 'El registro ha sido removido.',
+          text: 'El registro ha sido removido exitosamente.',
           confirmButtonColor: '#0A1128',
           timer: 1500,
           showConfirmButton: false
@@ -513,20 +579,36 @@ export default function Landing() {
     });
   };
 
-  const handleUpdateUser = (updatedData) => {
-    const updated = registeredUsers.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u));
+  const handleUpdateUser = async (updatedData) => {
+    const updated = registeredUsers.map((u) => {
+      const isMatch = (u.id && u.id === updatedData.id) || 
+                      (u.correo && updatedData.correo && u.correo.toLowerCase() === updatedData.correo.toLowerCase());
+      return isMatch ? { ...u, ...updatedData } : u;
+    });
     setRegisteredUsers(updated);
     try {
       localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
     } catch (err) {
       console.error(err);
     }
-    updateRemoteUser(updatedData.id, updatedData);
+    await updateRemoteUser(updatedData.id, updatedData, updatedData);
+    window.dispatchEvent(new Event('sisnets_users_updated'));
 
     // Si la usuaria actualizada es la usuaria activa en sesión, actualizar sesión también
     if (user && (user.id === updatedData.id || user.correo?.toLowerCase() === updatedData.correo?.toLowerCase())) {
       login({ ...user, ...updatedData });
     }
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Datos Actualizados',
+      text: `La información de ${updatedData.nombre} ha sido guardada exitosamente.`,
+      confirmButtonColor: '#0A1128',
+      timer: 1600,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end'
+    });
   };
 
   const handleExportCSV = () => {
