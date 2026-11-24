@@ -179,6 +179,33 @@ export default function Landing() {
     }
   }, [registeredUsers]);
 
+  // Sincronización automática de usuarios al enfocar la ventana o cambiar el almacenamiento
+  useEffect(() => {
+    const syncUsersFromStorage = () => {
+      try {
+        const stored = localStorage.getItem('usuarios_colegio');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const nonDemoUsers = parsed.filter(
+              (u) => !isDemoUser(u) && u.id !== 'admin_ruth' && u.correo !== 'admin@trabajosocial.org'
+            );
+            setRegisteredUsers([ADMIN_RUTH_USER, ...nonDemoUsers]);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    window.addEventListener('storage', syncUsersFromStorage);
+    window.addEventListener('focus', syncUsersFromStorage);
+    return () => {
+      window.removeEventListener('storage', syncUsersFromStorage);
+      window.removeEventListener('focus', syncUsersFromStorage);
+    };
+  }, []);
+
   const handleLogout = () => {
     Swal.fire({
       title: '¿Cerrar Sesión?',
@@ -839,8 +866,22 @@ export default function Landing() {
                       type="button"
                       onClick={() => {
                         syncDirectorio(false);
+                        try {
+                          const stored = localStorage.getItem('usuarios_colegio');
+                          if (stored) {
+                            const parsed = JSON.parse(stored);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                              const nonDemoUsers = parsed.filter(
+                                (u) => !isDemoUser(u) && u.id !== 'admin_ruth' && u.correo !== 'admin@trabajosocial.org'
+                              );
+                              setRegisteredUsers([ADMIN_RUTH_USER, ...nonDemoUsers]);
+                            }
+                          }
+                        } catch (err) {}
                         setSearchTerm('');
+                        setUserSearchTerm('');
                         setSelectedFilter('Todos');
+                        setUserFilterRole('todos');
                         setIsFilterDropdownOpen(false);
                         setCurrentPage(1);
                       }}

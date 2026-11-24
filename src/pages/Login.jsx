@@ -160,66 +160,132 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
+    const cleanCorreo = (formData.correo || '').trim().toLowerCase();
+
     try {
       // Simulación de latencia de API (Backend SISGEIN)
-      await new Promise((res) => setTimeout(res, 800));
+      await new Promise((res) => setTimeout(res, 600));
 
-      // Buscar si el usuario existe en el directorio de usuarios del colegio
-      let existingUser = null;
+      // Obtener lista actual de usuarios desde localStorage
+      let usersList = [];
       try {
         const rawUsers = localStorage.getItem('usuarios_colegio');
-        const usersList = rawUsers ? JSON.parse(rawUsers) : [];
-        existingUser = usersList.find(u => u.correo?.toLowerCase() === formData.correo?.toLowerCase());
+        usersList = rawUsers ? JSON.parse(rawUsers) : [];
       } catch (err) {
         console.error(err);
       }
 
-      const isRuth = formData.correo.toLowerCase().includes('ruthanastacio') || formData.correo.toLowerCase().includes('ruth') || formData.correo.toLowerCase() === 'ruthanastacio191202@gmail.com';
-      const isAdmin = isRuth || formData.correo.toLowerCase().includes('admin') || existingUser?.rol === 'admin';
+      const isRuth = cleanCorreo === 'ruthanastacio191202@gmail.com' || cleanCorreo.includes('ruthanastacio') || cleanCorreo.includes('ruth');
+      const isAdmin = isRuth || cleanCorreo.includes('admin');
 
-      const rawTel = formData.telefono ? formData.telefono.replace(/[^0-9]/g, '') : '';
-      const formattedTel = rawTel 
-        ? `+51 ${rawTel.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3').trim()}` 
-        : (existingUser?.telefono || '+51 987 654 321');
-
-      const loggedUser = {
-        id: isRuth ? 'admin_ruth' : (existingUser?.id || (isAdmin ? 'admin_user' : ('ts_' + Date.now()))),
-        nombre: isRuth
-          ? 'Ruth Anastacio'
-          : (existingUser?.nombre || (mode === 'register' ? (formData.nombreCompleto || 'Ruth Anastacio') : 'Colega SISNETS')),
-        correo: isRuth ? (formData.correo || 'ruthanastacio191202@gmail.com') : formData.correo,
-        rol: (isRuth || isAdmin) ? 'admin' : (existingUser?.rol || (mode === 'register' ? (formData.tipoPerfil === 'Egresada' ? 'Egresada' : 'Estudiante / Practicante') : 'colegiada')),
-        centro: existingUser?.centro || (mode === 'register' && formData.centroLaboral ? formData.centroLaboral : 'SISNETS (Sede Central)'),
-        apoyo: existingUser?.apoyo || (mode === 'register' && formData.areaApoyo ? formData.areaApoyo : 'Gestión institucional y convenios'),
-        telefono: formattedTel,
-        avatar: existingUser?.avatar || '/logo.png',
-        metodo: 'Credenciales Directas',
-        debeCambiarPassword: existingUser?.debeCambiarPassword || false
-      };
-
+      // 1. VALIDACIÓN EN MODO REGISTRO
       if (mode === 'register') {
-        try {
-          const rawUsers = localStorage.getItem('usuarios_colegio');
-          const usersList = rawUsers ? JSON.parse(rawUsers) : [];
-          const exists = usersList.some(u => u.correo?.toLowerCase() === loggedUser.correo?.toLowerCase());
-          if (!exists) {
-            usersList.unshift({
-              id: loggedUser.id,
-              nombre: loggedUser.nombre,
-              correo: loggedUser.correo,
-              telefono: loggedUser.telefono,
-              rol: loggedUser.rol,
-              condicion: formData.tipoPerfil === 'Egresada' ? 'egresada' : 'practicante',
-              centro: loggedUser.centro,
-              sector: 'Comunitario / ONGs',
-              estado: 'activa',
-              fechaIngreso: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
-            });
-            localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
-          }
-        } catch (e) {
-          console.error(e);
+        const cleanNombre = (formData.nombreCompleto || '').trim();
+        if (!cleanNombre) {
+          setError('Por favor ingresa tu nombre completo.');
+          setLoading(false);
+          return;
         }
+
+        // Validar si el correo ya existe
+        const emailExists = usersList.some((u) => u.correo && u.correo.toLowerCase() === cleanCorreo) || isRuth;
+
+        if (emailExists) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Usuario ya Registrado',
+            text: `Ya existe una cuenta con el correo "${cleanCorreo}". Por favor selecciona "Iniciar Sesión" para ingresar.`,
+            confirmButtonColor: '#0A1128'
+          });
+          setError('Este correo electrónico ya se encuentra registrado.');
+          setLoading(false);
+          return;
+        }
+
+        const rawTel = formData.telefono ? formData.telefono.replace(/[^0-9]/g, '') : '';
+        const formattedTel = rawTel 
+          ? `+51 ${rawTel.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3').trim()}` 
+          : '+51 987 654 321';
+
+        const newUser = {
+          id: `usr_${Date.now()}`,
+          nombre: cleanNombre,
+          correo: cleanCorreo,
+          telefono: formattedTel,
+          rol: 'colegiada',
+          condicion: formData.tipoPerfil === 'Estudiante' ? 'practicante' : 'egresada',
+          centro: formData.centroLaboral?.trim() || 'SISNETS (Comunidad)',
+          sector: formData.tipoPerfil === 'Estudiante' ? 'Prácticas Pre-Profesionales' : 'Comunitario / ONGs',
+          estado: 'activa',
+          verificada: true,
+          fechaRegistro: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        };
+
+        // Guardar nuevo usuario de inmediato en el almacenamiento
+        usersList.unshift(newUser);
+        localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+
+        if (formData.remember && formData.correo) {
+          localStorage.setItem('sisnets_remember_correo', formData.correo);
+        }
+
+        login(newUser);
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Registro Exitoso!',
+          text: `Bienvenida a SISNETS, ${newUser.nombre}. Tu cuenta ha sido creada exitosamente.`,
+          confirmButtonColor: '#0A1128',
+          background: isDarkMode ? '#0F172A' : '#FFFFFF',
+          color: isDarkMode ? '#F8FAFC' : '#0F172A',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        return;
+      }
+
+      // 2. MODO INICIO DE SESIÓN
+      let targetUser = usersList.find((u) => u.correo && u.correo.toLowerCase() === cleanCorreo);
+
+      if (isRuth) {
+        targetUser = {
+          id: 'admin_ruth',
+          nombre: 'Ruth Anastacio',
+          correo: 'ruthanastacio191202@gmail.com',
+          rol: 'admin',
+          condicion: 'egresada',
+          centro: 'SISNETS (Sede Central)',
+          sector: 'Gestión Institucional',
+          telefono: '+51 987 654 321',
+          estado: 'activa',
+          verificada: true,
+          avatar: '/logo.png',
+          metodo: 'Credenciales Directas'
+        };
+
+        // Asegurar que Ruth esté en usuarios_colegio
+        if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'ruthanastacio191202@gmail.com')) {
+          usersList.unshift(targetUser);
+          localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        }
+      } else if (!targetUser) {
+        targetUser = {
+          id: `usr_${Date.now()}`,
+          nombre: cleanCorreo.split('@')[0],
+          correo: cleanCorreo,
+          rol: isAdmin ? 'admin' : 'colegiada',
+          condicion: 'egresada',
+          centro: 'SISNETS (Comunidad)',
+          sector: 'Comunitario / ONGs',
+          telefono: '+51 987 654 321',
+          estado: 'activa',
+          verificada: true,
+          avatar: '/logo.png',
+          metodo: 'Credenciales Directas',
+          fechaRegistro: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        };
+        usersList.unshift(targetUser);
+        localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
       }
 
       if (formData.remember && formData.correo) {
@@ -228,16 +294,16 @@ export default function Login() {
         localStorage.removeItem('sisnets_remember_correo');
       }
 
-      login(loggedUser);
+      login(targetUser);
 
       Swal.fire({
         icon: 'success',
         title: '¡Acceso Concedido!',
-        text: `Bienvenido(a) al Networking de Trabajadores Sociales, ${loggedUser.nombre}.`,
+        text: `Bienvenida a SISNETS, ${targetUser.nombre}.`,
         confirmButtonColor: '#0A1128',
         background: isDarkMode ? '#0F172A' : '#FFFFFF',
         color: isDarkMode ? '#F8FAFC' : '#0F172A',
-        timer: 2000,
+        timer: 1800,
         showConfirmButton: false
       });
     } catch (err) {
