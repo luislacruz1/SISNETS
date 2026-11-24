@@ -209,6 +209,7 @@ export default function AuthSection({ isOpen, onClose }) {
 
         usersList.unshift(newUser);
         localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        window.dispatchEvent(new Event('sisnets_users_updated'));
 
         if (formData.remember && formData.correo) {
           localStorage.setItem('sisnets_remember_correo', formData.correo);
@@ -280,6 +281,7 @@ export default function AuthSection({ isOpen, onClose }) {
       }
 
       login(targetUser);
+      window.dispatchEvent(new Event('sisnets_users_updated'));
       if (onClose) onClose();
     } catch (err) {
       setError('Credenciales incorrectas o error en el servidor.');

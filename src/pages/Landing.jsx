@@ -92,8 +92,43 @@ const USER_FILTER_OPTIONS = [
   }
 ];
 
+// Helper maestro para mantener intactos los usuarios registrados y preservar ediciones de Ruth Anastacio
+const cleanAndMergeUsers = (parsed) => {
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return [ADMIN_RUTH_USER];
+  }
+
+  // IDs de demo antiguos que deben ser depurados si aún quedan en el almacenamiento
+  const FAKE_DEMO_IDS = [
+    'admin_stephanie', 'usr_claudia', 'usr_valeria', 'usr_mariana',
+    'usr_camila', 'usr_roberto', 'usr_lucia', 'usr_andrea',
+    'usr_daniela', 'usr_patricia', 'usr_andream', 'usr_sofia', 'usr_mariap', 'usr_karen'
+  ];
+
+  // 1. Buscar a Ruth en el almacenamiento para preservar cualquier cambio guardado (nombre, teléfono, etc.)
+  const storedRuth = parsed.find(
+    (u) => u && (u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com')
+  );
+  const activeRuth = storedRuth
+    ? { ...ADMIN_RUTH_USER, ...storedRuth, rol: 'admin' }
+    : ADMIN_RUTH_USER;
+
+  // 2. Extraer todos los usuarios registrados reales creados en el sistema
+  const realUsers = parsed.filter(
+    (u) =>
+      u &&
+      typeof u === 'object' &&
+      !FAKE_DEMO_IDS.includes(u.id) &&
+      u.id !== 'admin_ruth' &&
+      u.correo?.toLowerCase() !== 'ruthanastacio191202@gmail.com' &&
+      u.correo?.toLowerCase() !== 'admin@trabajosocial.org'
+  );
+
+  return [activeRuth, ...realUsers];
+};
+
 export default function Landing() {
-  const { user, logout } = useAuth();
+  const { user, logout, login } = useAuth();
 
   // Estados de vista y modales
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -104,8 +139,28 @@ export default function Landing() {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Control del Panel de Navegación y Vistas Administrativas
-  const [adminTab, setAdminTab] = useState('directorio'); // 'directorio' | 'usuarios' | 'metricas'
+  // Control del Panel de Navegación persistente en recarga (F5)
+  const [adminTab, setAdminTabState] = useState(() => {
+    try {
+      const savedTab = localStorage.getItem('sisnets_active_admin_tab');
+      if (savedTab && ['directorio', 'usuarios', 'metricas'].includes(savedTab)) {
+        return savedTab;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return 'directorio';
+  });
+
+  const setAdminTab = (tab) => {
+    setAdminTabState(tab);
+    try {
+      localStorage.setItem('sisnets_active_admin_tab', tab);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Control de colapso en escritorio
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false); // Drawer móvil
   const [userSearchTerm, setUserSearchTerm] = useState('');
@@ -119,55 +174,18 @@ export default function Landing() {
     }
   };
 
-  // Helper para depurar usuarios de prueba previos
-  const isDemoUser = (u) => {
-    if (!u) return false;
-    const demoIds = [
-      'admin_stephanie',
-      'usr_claudia',
-      'usr_valeria',
-      'usr_mariana',
-      'usr_camila',
-      'usr_roberto',
-      'usr_lucia',
-      'usr_andrea',
-      'usr_daniela',
-      'usr_patricia',
-      'usr_andream',
-      'usr_sofia',
-      'usr_mariap',
-      'usr_karen'
-    ];
-    if (demoIds.includes(u.id)) return true;
-    if (u.nombre && (
-      u.nombre.includes('Stephanie Natalia Laos') ||
-      u.nombre.includes('Claudia Morales') ||
-      u.nombre.includes('Valeria Sánchez') ||
-      u.nombre.includes('Mariana Gómez') ||
-      u.nombre.includes('Camila Fernández') ||
-      u.nombre.includes('Roberto Quispe')
-    )) return true;
-    return false;
-  };
-
-  // Gestión de Usuarios Registrados en el Colegio / Red (con Ruth Anastacio asegurada)
+  // Gestión de Usuarios Registrados en el Colegio / Red (con Ruth Anastacio asegurada y editable)
   const [registeredUsers, setRegisteredUsers] = useState(() => {
-    let users = [ADMIN_RUTH_USER];
     try {
       const stored = localStorage.getItem('usuarios_colegio');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const nonDemoUsers = parsed.filter(
-            (u) => !isDemoUser(u) && u.id !== 'admin_ruth' && u.correo !== 'admin@trabajosocial.org'
-          );
-          users = [ADMIN_RUTH_USER, ...nonDemoUsers];
-        }
+        return cleanAndMergeUsers(parsed);
       }
     } catch (e) {
       console.error(e);
     }
-    return users;
+    return [ADMIN_RUTH_USER];
   });
 
   // Guardar usuarias en localStorage ante cualquier cambio
@@ -186,12 +204,13 @@ export default function Landing() {
         const stored = localStorage.getItem('usuarios_colegio');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const nonDemoUsers = parsed.filter(
-              (u) => !isDemoUser(u) && u.id !== 'admin_ruth' && u.correo !== 'admin@trabajosocial.org'
-            );
-            setRegisteredUsers([ADMIN_RUTH_USER, ...nonDemoUsers]);
-          }
+          const merged = cleanAndMergeUsers(parsed);
+          setRegisteredUsers((prev) => {
+            if (JSON.stringify(prev) !== JSON.stringify(merged)) {
+              return merged;
+            }
+            return prev;
+          });
         }
       } catch (e) {
         console.error(e);
@@ -200,9 +219,11 @@ export default function Landing() {
 
     window.addEventListener('storage', syncUsersFromStorage);
     window.addEventListener('focus', syncUsersFromStorage);
+    window.addEventListener('sisnets_users_updated', syncUsersFromStorage);
     return () => {
       window.removeEventListener('storage', syncUsersFromStorage);
       window.removeEventListener('focus', syncUsersFromStorage);
+      window.removeEventListener('sisnets_users_updated', syncUsersFromStorage);
     };
   }, []);
 
@@ -264,11 +285,11 @@ export default function Landing() {
       const stored = localStorage.getItem('directorio_colegas');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
+          const cleanCards = parsed.filter((c) => c && !c.id?.startsWith('demo_'));
           setMentorCards((prev) => {
-            // Si hay cambios en la longitud o contenido, actualizar estado silenciosamente
-            if (JSON.stringify(prev) !== JSON.stringify(parsed)) {
-              return parsed;
+            if (JSON.stringify(prev) !== JSON.stringify(cleanCards)) {
+              return cleanCards;
             }
             return prev;
           });
@@ -279,14 +300,13 @@ export default function Landing() {
       const storedUsers = localStorage.getItem('usuarios_colegio');
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
-        if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
-          setRegisteredUsers((prev) => {
-            if (JSON.stringify(prev) !== JSON.stringify(parsedUsers)) {
-              return parsedUsers;
-            }
-            return prev;
-          });
-        }
+        const mergedUsers = cleanAndMergeUsers(parsedUsers);
+        setRegisteredUsers((prev) => {
+          if (JSON.stringify(prev) !== JSON.stringify(mergedUsers)) {
+            return mergedUsers;
+          }
+          return prev;
+        });
       }
     } catch (e) {
       console.error('Error sincronizando en Short Polling:', e);
@@ -299,13 +319,16 @@ export default function Landing() {
 
   // SHORT POLLING CADA 20 SEGUNDOS (Estilo SISGEIN)
   useEffect(() => {
-    // 1. Sincronización instantánea ante eventos entre pestañas/ventanas del navegador
+    // 1. Sincronización instantánea ante eventos entre pestañas/ventanas del navegador y eventos locales
     const handleStorageChange = (e) => {
       if (e.key === 'directorio_colegas' || e.key === 'usuarios_colegio') {
         syncDirectorio(true);
       }
     };
+    const handleDirectorioEvent = () => syncDirectorio(true);
+
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('sisnets_directorio_updated', handleDirectorioEvent);
 
     // 2. Reloj maestro de Short Polling: ciclo cada 20 segundos (20000 ms)
     const pollingInterval = setInterval(() => {
@@ -314,6 +337,7 @@ export default function Landing() {
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('sisnets_directorio_updated', handleDirectorioEvent);
       clearInterval(pollingInterval);
     };
   }, []);
@@ -332,30 +356,47 @@ export default function Landing() {
       ...newCard,
       verificada: user?.rol === 'admin' ? true : !!newCard.verificada
     };
-    setMentorCards([cardWithStatus, ...mentorCards]);
+
+    // 1. Actualizar estado y sincronizar en localStorage inmediatamente (tiempo real garantizado)
+    setMentorCards((prev) => {
+      const updated = [cardWithStatus, ...prev.filter((c) => c.id !== cardWithStatus.id)];
+      try {
+        localStorage.setItem('directorio_colegas', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
     setCurrentPage(1);
 
-    // Sincronizar en lista de usuarias registradas
+    // 2. Sincronizar en lista de usuarias registradas
     setRegisteredUsers((prev) => {
       const exists = prev.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
       if (exists) return prev;
-      return [
-        {
-          id: 'usr_' + Date.now(),
-          nombre: cardWithStatus.nombre,
-          correo: cardWithStatus.correo,
-          telefono: cardWithStatus.telefono,
-          rol: user?.rol === 'admin' ? 'admin' : 'colegiada',
-          condicion: cardWithStatus.condicion,
-          centro: cardWithStatus.institucion,
-          sector: cardWithStatus.sector,
-          estado: 'activa',
-          verificada: !!cardWithStatus.verificada,
-          fechaRegistro: new Date().toLocaleDateString('es-PE')
-        },
-        ...prev
-      ];
+      const newUserFromCard = {
+        id: 'usr_' + Date.now(),
+        nombre: cardWithStatus.nombre,
+        correo: cardWithStatus.correo || `usuario_${Date.now()}@sisnets.pe`,
+        telefono: cardWithStatus.telefono,
+        rol: user?.rol === 'admin' ? 'admin' : 'colegiada',
+        condicion: cardWithStatus.condicion,
+        centro: cardWithStatus.institucion,
+        sector: cardWithStatus.sector || 'Comunitario / ONGs',
+        estado: 'activa',
+        verificada: !!cardWithStatus.verificada,
+        fechaRegistro: new Date().toLocaleDateString('es-PE')
+      };
+      const updatedUsers = [prev[0] || ADMIN_RUTH_USER, newUserFromCard, ...prev.slice(1)];
+      try {
+        localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+      } catch (e) {
+        console.error(e);
+      }
+      return updatedUsers;
     });
+
+    window.dispatchEvent(new Event('sisnets_directorio_updated'));
+    window.dispatchEvent(new Event('sisnets_users_updated'));
 
     Swal.fire({
       icon: 'success',
@@ -452,9 +493,21 @@ export default function Landing() {
   };
 
   const handleUpdateUser = (updatedData) => {
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u))
-    );
+    setRegisteredUsers((prev) => {
+      const updated = prev.map((u) => (u.id === updatedData.id ? { ...u, ...updatedData } : u));
+      try {
+        localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
+      } catch (err) {
+        console.error(err);
+      }
+      return updated;
+    });
+
+    // Si la usuaria actualizada es la usuaria activa en sesión, actualizar sesión también
+    if (user && (user.id === updatedData.id || user.correo?.toLowerCase() === updatedData.correo?.toLowerCase())) {
+      login({ ...user, ...updatedData });
+    }
+    window.dispatchEvent(new Event('sisnets_users_updated'));
   };
 
   const handleExportCSV = () => {
@@ -669,22 +722,24 @@ export default function Landing() {
     }
   };
 
-  // Filtrado reactivo en el portal privado
+  // Filtrado reactivo en el portal privado con protecciones contra nulos
   const filteredCards = useMemo(() => {
     return mentorCards.filter((card) => {
+      if (!card) return false;
       let matchFilter = true;
       if (selectedFilter === 'egresada' || selectedFilter === 'Egresada(o)') {
-        matchFilter = card.condicion === 'egresada' || card.tipo?.toLowerCase().includes('egresad');
+        matchFilter = card.condicion === 'egresada' || (card.tipo && card.tipo.toLowerCase().includes('egresad'));
       } else if (selectedFilter === 'practicante' || selectedFilter === 'Practicante') {
-        matchFilter = card.condicion === 'practicante' || card.tipo?.toLowerCase().includes('practicant');
+        matchFilter = card.condicion === 'practicante' || (card.tipo && card.tipo.toLowerCase().includes('practicant'));
       }
 
-      const matchSearch = searchTerm === '' ||
-        card.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.institucion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (card.cargo && card.cargo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        card.apoyo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (card.sector && card.sector.toLowerCase().includes(searchTerm.toLowerCase()));
+      const term = (searchTerm || '').trim().toLowerCase();
+      const matchSearch = term === '' ||
+        (card.nombre && card.nombre.toLowerCase().includes(term)) ||
+        (card.institucion && card.institucion.toLowerCase().includes(term)) ||
+        (card.cargo && card.cargo.toLowerCase().includes(term)) ||
+        (card.apoyo && card.apoyo.toLowerCase().includes(term)) ||
+        (card.sector && card.sector.toLowerCase().includes(term));
       return matchFilter && matchSearch;
     });
   }, [mentorCards, selectedFilter, searchTerm]);
@@ -870,12 +925,7 @@ export default function Landing() {
                           const stored = localStorage.getItem('usuarios_colegio');
                           if (stored) {
                             const parsed = JSON.parse(stored);
-                            if (Array.isArray(parsed) && parsed.length > 0) {
-                              const nonDemoUsers = parsed.filter(
-                                (u) => !isDemoUser(u) && u.id !== 'admin_ruth' && u.correo !== 'admin@trabajosocial.org'
-                              );
-                              setRegisteredUsers([ADMIN_RUTH_USER, ...nonDemoUsers]);
-                            }
+                            setRegisteredUsers(cleanAndMergeUsers(parsed));
                           }
                         } catch (err) {}
                         setSearchTerm('');
@@ -1273,7 +1323,9 @@ export default function Landing() {
         onClose={() => setIsCreateUserModalOpen(false)}
         onUserCreated={(newUser) => {
           setRegisteredUsers((prev) => {
-            const updated = [newUser, ...prev.filter((u) => u.correo?.toLowerCase() !== newUser.correo?.toLowerCase())];
+            const ruth = prev.find((u) => u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com') || ADMIN_RUTH_USER;
+            const others = prev.filter((u) => u.id !== ruth.id && u.correo?.toLowerCase() !== newUser.correo?.toLowerCase());
+            const updated = [ruth, newUser, ...others];
             try {
               localStorage.setItem('usuarios_colegio', JSON.stringify(updated));
             } catch (err) {
@@ -1281,6 +1333,7 @@ export default function Landing() {
             }
             return updated;
           });
+          window.dispatchEvent(new Event('sisnets_users_updated'));
         }}
         existingUsers={registeredUsers}
       />

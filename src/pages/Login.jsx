@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   User,
   Lock,
@@ -33,6 +33,14 @@ import { supabase } from '../lib/supabaseClient';
 export default function Login() {
   const { user, login, logout } = useAuth();
   const { isDarkMode } = useTheme();
+  const navigate = useNavigate();
+
+  // Si ya hay sesión iniciada, redirigir automáticamente al panel principal
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [loading, setLoading] = useState(false);
@@ -224,6 +232,7 @@ export default function Login() {
         // Guardar nuevo usuario de inmediato en el almacenamiento
         usersList.unshift(newUser);
         localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        window.dispatchEvent(new Event('sisnets_users_updated'));
 
         if (formData.remember && formData.correo) {
           localStorage.setItem('sisnets_remember_correo', formData.correo);
@@ -238,9 +247,13 @@ export default function Login() {
           confirmButtonColor: '#0A1128',
           background: isDarkMode ? '#0F172A' : '#FFFFFF',
           color: isDarkMode ? '#F8FAFC' : '#0F172A',
-          timer: 2000,
+          timer: 1600,
           showConfirmButton: false
         });
+
+        setTimeout(() => {
+          navigate('/');
+        }, 1200);
         return;
       }
 
@@ -295,6 +308,7 @@ export default function Login() {
       }
 
       login(targetUser);
+      window.dispatchEvent(new Event('sisnets_users_updated'));
 
       Swal.fire({
         icon: 'success',
@@ -303,9 +317,13 @@ export default function Login() {
         confirmButtonColor: '#0A1128',
         background: isDarkMode ? '#0F172A' : '#FFFFFF',
         color: isDarkMode ? '#F8FAFC' : '#0F172A',
-        timer: 1800,
+        timer: 1500,
         showConfirmButton: false
       });
+
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
     } catch (err) {
       setError('Credenciales incorrectas o servidor no disponible.');
     } finally {
