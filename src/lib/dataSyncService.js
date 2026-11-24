@@ -146,14 +146,14 @@ export const saveRemoteUser = async (user) => {
     correo: cleanEmail,
     telefono: user.telefono || '',
     password: finalPassword,
-    debeCambiarPassword: !!user.debeCambiarPassword,
+    debecambiarpassword: !!(user.debeCambiarPassword ?? user.debecambiarpassword),
     rol: user.rol || 'colegiada',
     condicion: user.condicion || 'egresada',
     centro: user.centro || '',
     sector: user.sector || '',
     estado: user.estado || 'activa',
     verificada: user.verificada !== false,
-    fechaRegistro: user.fechaRegistro || new Date().toLocaleDateString('es-PE'),
+    fecharegistro: user.fechaRegistro || user.fecharegistro || new Date().toLocaleDateString('es-PE'),
     avatar: user.avatar || '/logo.png'
   };
 
@@ -173,7 +173,12 @@ export const saveRemoteUser = async (user) => {
 export const updateRemoteUser = async (userId, partialData) => {
   if (!userId) return false;
   try {
-    const sanitizedData = { ...partialData };
+    const sanitizedData = {};
+    for (const [key, val] of Object.entries(partialData)) {
+      if (key === 'debeCambiarPassword') sanitizedData.debecambiarpassword = val;
+      else if (key === 'fechaRegistro') sanitizedData.fecharegistro = val;
+      else sanitizedData[key.toLowerCase()] = val;
+    }
     if (sanitizedData.correo) {
       sanitizedData.correo = sanitizeEmail(sanitizedData.correo);
     }
@@ -257,12 +262,12 @@ export const saveRemoteDirectorioCard = async (card) => {
     nombre: card.nombre,
     condicion: card.condicion || 'egresada',
     tipo: card.tipo || 'Colegiada',
-    cicloEstudio: card.cicloEstudio || null,
+    cicloestudio: card.cicloEstudio || card.cicloestudio || null,
     institucion: card.institucion,
-    centroTipo: card.centroTipo || 'Centro Laboral',
+    centrotipo: card.centroTipo || card.centrotipo || (card.condicion === 'practicante' ? 'Centro de Prácticas' : 'Centro Laboral'),
     cargo: card.cargo || '',
     sector: card.sector || 'General',
-    apoyo: card.apoyo || '',
+    apoyo: card.apoyo || (Array.isArray(card.fortalezas) ? card.fortalezas.join(' · ') : ''),
     fortalezas: Array.isArray(card.fortalezas) ? card.fortalezas : (card.apoyo ? card.apoyo.split(' · ') : []),
     telefono: card.telefono,
     correo: card.correo || '',
@@ -286,9 +291,16 @@ export const saveRemoteDirectorioCard = async (card) => {
 export const updateRemoteDirectorioCard = async (cardId, partialData) => {
   if (!cardId) return false;
   try {
+    const payload = {};
+    for (const [key, val] of Object.entries(partialData)) {
+      if (key === 'centroTipo') payload.centrotipo = val;
+      else if (key === 'cicloEstudio') payload.cicloestudio = val;
+      else payload[key.toLowerCase()] = val;
+    }
+
     const { error } = await supabase
       .from('directorio_colegas')
-      .update(partialData)
+      .update(payload)
       .eq('id', String(cardId));
     if (error) {
       console.warn('Error actualizando ficha en Supabase:', error.message);

@@ -270,7 +270,14 @@ export default function Landing() {
       // 1. Sincronizar directorio desde la nube Supabase
       const cloudCards = await fetchRemoteDirectorio();
       if (cloudCards && Array.isArray(cloudCards)) {
-        setMentorCards(cloudCards);
+        setMentorCards((prev) => {
+          // Preservar fichas agregadas localmente que aún no hayan terminado de propagarse en la nube
+          const cloudIds = new Set(cloudCards.map((c) => String(c.id)));
+          const localOnly = (prev || []).filter(
+            (p) => p && !cloudIds.has(String(p.id)) && !String(p.id).startsWith('demo_')
+          );
+          return [...localOnly, ...cloudCards];
+        });
       } else {
         const stored = localStorage.getItem('directorio_colegas');
         if (stored) {
@@ -358,24 +365,25 @@ export default function Landing() {
     setCurrentPage(1);
   }, [searchTerm, selectedFilter, itemsPerPage]);
 
-  const handleAddNewSupport = (newCard) => {
+  const handleAddNewSupport = async (newCard) => {
     const cardWithStatus = {
       ...newCard,
       verificada: user?.rol === 'admin' ? true : !!newCard.verificada
     };
 
     // 1. Actualizar estado y sincronizar en localStorage de inmediato
-    const updatedCards = [cardWithStatus, ...mentorCards.filter((c) => c.id !== cardWithStatus.id)];
-    setMentorCards(updatedCards);
+    setMentorCards((prev) => [cardWithStatus, ...prev.filter((c) => c.id !== cardWithStatus.id)]);
     try {
+      const stored = JSON.parse(localStorage.getItem('directorio_colegas') || '[]');
+      const updatedCards = [cardWithStatus, ...stored.filter((c) => c.id !== cardWithStatus.id)];
       localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
     } catch (e) {
       console.error(e);
     }
     setCurrentPage(1);
 
-    // Guardar en la nube Supabase en segundo plano
-    saveRemoteDirectorioCard(cardWithStatus);
+    // Guardar en la nube Supabase de inmediato
+    await saveRemoteDirectorioCard(cardWithStatus);
 
     // 2. Sincronizar en lista de usuarias registradas
     const exists = registeredUsers.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
