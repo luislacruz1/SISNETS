@@ -9,6 +9,44 @@ const FAKE_DEMO_IDS = [
   'usr_daniela', 'usr_patricia', 'usr_andream', 'usr_sofia', 'usr_mariap', 'usr_karen'
 ];
 
+// Columnas estrictamente válidas en la tabla public.usuarios de PostgreSQL / Supabase
+const VALID_USUARIOS_COLUMNS = new Set([
+  'id',
+  'nombre',
+  'correo',
+  'telefono',
+  'password',
+  'debecambiarpassword',
+  'rol',
+  'condicion',
+  'centro',
+  'sector',
+  'estado',
+  'verificada',
+  'fecharegistro',
+  'avatar'
+]);
+
+// Columnas estrictamente válidas en la tabla public.directorio_colegas de PostgreSQL / Supabase
+const VALID_DIRECTORIO_COLUMNS = new Set([
+  'id',
+  'user_id',
+  'nombre',
+  'condicion',
+  'tipo',
+  'cicloestudio',
+  'institucion',
+  'centrotipo',
+  'cargo',
+  'sector',
+  'apoyo',
+  'fortalezas',
+  'telefono',
+  'correo',
+  'verificada',
+  'avatar'
+]);
+
 /**
  * Limpia y fusiona usuarios preservando a Ruth Anastacio y Luis Jhonatan La Cruz Urbano
  */
@@ -32,6 +70,26 @@ export const cleanAndMergeUsers = (parsed) => {
   const activeLuis = storedLuis
     ? { ...LUIS_LACRUZ_USER, ...storedLuis, rol: storedLuis.rol || 'admin' }
     : LUIS_LACRUZ_USER;
+
+  // Safeguard: Si la sesión activa local ya tiene foto personalizada, evitar que un /logo.png desactualizado la pise
+  try {
+    const rawSession = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    if (rawSession) {
+      const sessionUser = JSON.parse(rawSession);
+      if (sessionUser && sessionUser.avatar && sessionUser.avatar !== '/logo.png' && sessionUser.avatar !== '/logo.svg') {
+        const sessionEmail = (sessionUser.correo || '').toLowerCase().trim();
+        if (sessionEmail === 'ruthanastacio191202@gmail.com' || sessionUser.id === 'admin_ruth') {
+          if (!activeRuth.avatar || activeRuth.avatar === '/logo.png' || activeRuth.avatar === '/logo.svg') {
+            activeRuth.avatar = sessionUser.avatar;
+          }
+        } else if (sessionEmail === 'luislacruz326@gmail.com' || sessionUser.id === 'usr_luis_lacruz') {
+          if (!activeLuis.avatar || activeLuis.avatar === '/logo.png' || activeLuis.avatar === '/logo.svg') {
+            activeLuis.avatar = sessionUser.avatar;
+          }
+        }
+      }
+    }
+  } catch (e) {}
 
   // 3. Usuarios reales adicionales
   const realUsers = parsed

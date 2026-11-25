@@ -1035,7 +1035,7 @@ export default function Landing() {
     });
 
     // 3. Persistir usuario en Supabase
-    if (updatedUserData.id) {
+    if (updatedUserData.id || updatedUserData.correo) {
       await updateRemoteUser(updatedUserData.id, updatedUserData, updatedUserData);
     }
 
@@ -1086,10 +1086,25 @@ export default function Landing() {
         await updateRemoteDirectorioCard(card.id, {
           avatar: card.avatar,
           nombre: card.nombre,
-          telefono: card.telefono
-        });
+          telefono: card.telefono,
+          user_id: card.user_id || updatedUserData.id,
+          correo: card.correo || userEmail
+        }, card);
       } catch (err) {
         console.warn('Error sincronizando foto en Supabase directorio:', err);
+      }
+    }
+
+    // Si no hubo fichas locales encontradas, sincronizar directamente en Supabase por autor
+    if (cardsToUpdate.length === 0 && (updatedUserData.id || userEmail)) {
+      try {
+        await updateRemoteDirectorioCard(null, {
+          avatar: updatedUserData.avatar,
+          user_id: updatedUserData.id,
+          correo: userEmail
+        }, { user_id: updatedUserData.id, correo: userEmail });
+      } catch (err) {
+        console.warn('Error sincronizando foto en Supabase directorio por autor:', err);
       }
     }
 

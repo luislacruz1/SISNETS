@@ -59,9 +59,6 @@ ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debeCambiarPassword BOOLEAN
 ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '/logo.png';
 ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
--- ------------------------------------------------------------------------------
--- 4. TABLA: DIRECTORIO_COLEGAS (Publicaciones de Centros y Apoyo)
--- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.directorio_colegas (
   id TEXT PRIMARY KEY,
   user_id TEXT,
