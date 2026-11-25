@@ -212,6 +212,21 @@ export const saveRemoteUser = async (user) => {
     }
   }
 
+  // Preservar avatar previo si el objeto recibido trae /logo.png por defecto pero ya existe foto en BD
+  let finalAvatar = user.avatar;
+  if (!finalAvatar || finalAvatar === '/logo.png' || finalAvatar === '/logo.svg') {
+    try {
+      const { data: existingUser } = await supabase
+        .from('usuarios')
+        .select('avatar')
+        .ilike('correo', cleanEmail)
+        .maybeSingle();
+      if (existingUser?.avatar && existingUser.avatar !== '/logo.png' && existingUser.avatar !== '/logo.svg') {
+        finalAvatar = existingUser.avatar;
+      }
+    } catch (e) {}
+  }
+
   const payload = {
     id: String(user.id || `usr_${Date.now()}`),
     nombre: user.nombre || '',
@@ -226,7 +241,7 @@ export const saveRemoteUser = async (user) => {
     estado: user.estado || 'activa',
     verificada: user.verificada !== false,
     fecharegistro: user.fechaRegistro || user.fecharegistro || new Date().toLocaleDateString('es-PE'),
-    avatar: user.avatar || '/logo.png'
+    avatar: finalAvatar || '/logo.png'
   };
 
   try {

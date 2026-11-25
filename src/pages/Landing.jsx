@@ -303,6 +303,26 @@ export default function Landing() {
       const cloudUsers = await fetchRemoteUsers();
       if (cloudUsers && Array.isArray(cloudUsers)) {
         setRegisteredUsers(cloudUsers);
+
+        // Si el usuario en sesión tiene datos o foto actualizada en la nube, actualizar su sesión
+        if (user) {
+          const freshMe = cloudUsers.find(
+            (u) =>
+              (u.id && u.id === user.id) ||
+              (u.correo && user.correo && u.correo.toLowerCase() === user.correo.toLowerCase())
+          );
+          if (freshMe) {
+            const hasNewAvatar = freshMe.avatar && freshMe.avatar !== '/logo.png' && freshMe.avatar !== '/logo.svg' && freshMe.avatar !== user.avatar;
+            const hasNewName = freshMe.nombre && freshMe.nombre !== user.nombre;
+            const hasNewPhone = freshMe.telefono && freshMe.telefono !== user.telefono && freshMe.telefono !== user.celular;
+            if (hasNewAvatar || hasNewName || hasNewPhone) {
+              updateUser({
+                ...freshMe,
+                avatar: freshMe.avatar || user.avatar
+              });
+            }
+          }
+        }
       } else {
         const storedUsers = localStorage.getItem('usuarios_colegio');
         if (storedUsers) {

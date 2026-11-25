@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Camera,
   Mail,
@@ -26,6 +26,19 @@ export default function AccountView({
   const [celular, setCelular] = useState(user?.celular || user?.telefono || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Mantener sincronizado el estado local si el usuario en sesión se actualiza o recarga
+  useEffect(() => {
+    if (user?.nombre || user?.nombreCompleto) {
+      setNombre(user.nombreCompleto || user.nombre || '');
+    }
+    if (user?.celular || user?.telefono) {
+      setCelular(user.celular || user.telefono || '');
+    }
+    if (user?.avatar) {
+      setAvatar(user.avatar);
+    }
+  }, [user]);
 
   // Detección de género adaptativa para el saludo y las etiquetas
   const isMale = isMasculineName(nombre || user?.nombre);
