@@ -105,24 +105,26 @@ export default function ColleagueCard({
               </div>
             )}
 
-            {/* Nombre y Badge de Condición INLINE directamente al lado del último apellido */}
+            {/* Nombre y Badge de Condición debajo del nombre */}
             <div className="min-w-0 flex-1">
               <h4 className="text-sm sm:text-base text-[#0A1128] dark:text-white leading-snug break-words transition-colors">
                 <span className="font-black group-hover:text-[#1E2B58] dark:group-hover:text-cyan-400">
                   {formatTitleCase(card.nombre)}
                 </span>
-                {/* Badge pegado al texto como inline-block con color Azul Encendido */}
+              </h4>
+              {/* Badges debajo del nombre: Condición + Ciclo */}
+              <div className="flex items-center gap-1.5 flex-wrap mt-1">
                 <span
-                  className="inline-block ml-1.5 px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider align-middle whitespace-nowrap shadow-xs bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-blue-500/25"
+                  className="inline-block px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider align-middle whitespace-nowrap shadow-xs bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-blue-500/25"
                 >
                   {isPracticante ? 'Practicante' : 'Colega'}
                 </span>
                 {isPracticante && card.cicloEstudio && (
-                  <span className="inline-block ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold align-middle whitespace-nowrap bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-bold align-middle whitespace-nowrap bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                     {card.cicloEstudio}
                   </span>
                 )}
-              </h4>
+              </div>
             </div>
           </div>
 

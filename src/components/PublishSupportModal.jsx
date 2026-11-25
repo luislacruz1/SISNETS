@@ -36,9 +36,11 @@ const OPCIONES_FORTALEZAS = [
   'OTRO'
 ];
 
-export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
+export default function PublishSupportModal({ isOpen, onClose, onPublish, initialCard = null }) {
   const { user } = useAuth();
   const { isDarkMode } = useTheme();
+
+  const isEditing = Boolean(initialCard);
 
   // Estados del Formulario
   const [condicion, setCondicion] = useState('egresada'); // 'egresada' | 'practicante'
@@ -54,22 +56,70 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
   const [otroTexto, setOtroTexto] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Autocompletado de datos del usuario logueado
+  // Inicialización o Autocompletado de datos
   useEffect(() => {
     if (isOpen) {
-      if (user) {
-        setNombre(user.nombre || '');
+      if (initialCard) {
+        const isPract = initialCard.condicion === 'practicante' || initialCard.tipo?.toLowerCase().includes('practicante');
+        setCondicion(isPract ? 'practicante' : 'egresada');
+        setNombre(initialCard.nombre || '');
+        const cleanTel = (initialCard.telefono || '').replace(/^\+?51\s*/, '').trim();
+        setTelefono(cleanTel);
+        if (isPract) {
+          setCentroPracticas(initialCard.institucion || '');
+          setCentroLaboral('');
+        } else {
+          setCentroLaboral(initialCard.institucion || '');
+          setCentroPracticas('');
+        }
+        setCargo(initialCard.cargo || '');
+        setCicloEstudio(initialCard.cicloEstudio || '8vo Ciclo');
+
+        let rawFort = [];
+        if (Array.isArray(initialCard.fortalezas) && initialCard.fortalezas.length > 0) {
+          rawFort = initialCard.fortalezas;
+        } else if (initialCard.apoyo) {
+          rawFort = initialCard.apoyo.split(' · ');
+        }
+
+        const standard = [];
+        let custom = '';
+        rawFort.forEach((f) => {
+          const matched = OPCIONES_FORTALEZAS.find((op) => op.toLowerCase() === f.trim().toLowerCase());
+          if (matched && matched !== 'OTRO') {
+            standard.push(matched);
+          } else if (f.trim()) {
+            standard.push('OTRO');
+            custom = f.trim();
+          }
+        });
+        setFortalezasSeleccionadas([...new Set(standard)]);
+        setOtroTexto(custom);
+      } else if (user) {
+        setCondicion(user.condicion === 'practicante' ? 'practicante' : 'egresada');
+        setNombre(user.nombreCompleto || user.nombre || '');
         if (user.telefono && user.telefono.trim() !== '') {
           const clean = user.telefono.replace(/^\+?51\s*/, '').trim();
           setTelefono(clean);
         } else {
           setTelefono('');
         }
+        setCentroLaboral(user.centro || '');
+        setCentroPracticas(user.centro || '');
+        setCargo(user.sector || '');
+        setCicloEstudio('8vo Ciclo');
+        setFortalezasSeleccionadas([]);
+        setOtroTexto('');
       } else {
         setTelefono('');
+        setCentroLaboral('');
+        setCentroPracticas('');
+        setCargo('');
+        setFortalezasSeleccionadas([]);
+        setOtroTexto('');
       }
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, initialCard]);
 
   if (!isOpen) return null;
 
@@ -145,22 +195,24 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
       : 'Practicante';
 
     const newCard = {
-      id: 'col_' + Date.now(),
-      user_id: user?.id,
+      ...(initialCard || {}),
+      id: initialCard?.id || ('col_' + Date.now()),
+      user_id: initialCard?.user_id || user?.id,
       nombre: nombre.trim(),
       condicion: condicion, // 'egresada' | 'practicante'
       tipo: tipoCalculado,
       cicloEstudio: condicion === 'practicante' ? cicloEstudio : null,
       institucion: institucionFinal,
       centroTipo: condicion === 'egresada' 
-        ? (isMale ? 'Centro Laboral' : 'Centro Laboral') 
+        ? 'Centro Laboral'
         : 'Centro de Prácticas',
       cargo: cargo.trim(),
-      sector: 'General',
+      sector: initialCard?.sector || 'General',
       apoyo: textoApoyoFinal,
       fortalezas: listaApoyo,
       telefono: formattedTelefono,
-      correo: user?.correo || ''
+      correo: initialCard?.correo || user?.correo || '',
+      avatar: initialCard?.avatar || user?.avatar || '/logo.png'
     };
 
     onPublish(newCard);
@@ -211,10 +263,12 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-black text-[#0A1128] dark:text-white uppercase tracking-tight">
-              Registrar Directorio
+              {isEditing ? 'Editar Ficha del Directorio' : 'Registrar Directorio'}
             </h3>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Conéctate con la red: comparte tu centro y en qué puedes brindar orientación a otras colegas.
+              {isEditing
+                ? 'Actualiza los datos institucionales, cargo, ciclo y tus temáticas de orientación.'
+                : 'Conéctate con la red: comparte tu centro y en qué puedes brindar orientación a otras colegas.'}
             </p>
           </div>
         </div>
@@ -559,7 +613,7 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish }) {
               type="submit"
               className="w-full py-3.5 bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-[#050B18] font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/25 transition active:scale-[0.98]"
             >
-              Publicar Directorio
+              {isEditing ? 'Guardar Cambios de la Ficha' : 'Publicar Directorio'}
             </button>
           </div>
 

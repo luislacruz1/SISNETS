@@ -119,6 +119,7 @@ export default function Landing() {
   const [selectedFilter, setSelectedFilter] = useState('Todos');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState(null);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -392,59 +393,79 @@ export default function Landing() {
     setCurrentPage(1);
   }, [searchTerm, selectedFilter, itemsPerPage]);
 
-  const handleAddNewSupport = async (newCard) => {
+  const handleAddNewSupport = async (cardData) => {
+    const isEdit = Boolean(editingCard);
     const cardWithStatus = {
-      ...newCard,
-      user_id: user?.id || newCard.user_id || `usr_${Date.now()}`,
-      correo: newCard.correo || user?.correo || '',
-      avatar: (newCard.avatar && newCard.avatar !== '/logo.png' && newCard.avatar !== '/logo.svg') ? newCard.avatar : (user?.avatar || ''),
-      verificada: user?.rol === 'admin' ? true : !!newCard.verificada
+      ...(editingCard || {}),
+      ...cardData,
+      user_id: editingCard?.user_id || user?.id || cardData.user_id || `usr_${Date.now()}`,
+      correo: cardData.correo || editingCard?.correo || user?.correo || '',
+      avatar: (cardData.avatar && cardData.avatar !== '/logo.png' && cardData.avatar !== '/logo.svg')
+        ? cardData.avatar
+        : (editingCard?.avatar || user?.avatar || ''),
+      verificada: user?.rol === 'admin' ? true : (editingCard?.verificada ?? !!cardData.verificada)
     };
 
     // 1. Actualizar estado y sincronizar en localStorage de inmediato
-    setMentorCards((prev) => [cardWithStatus, ...prev.filter((c) => c.id !== cardWithStatus.id)]);
-    try {
-      const stored = JSON.parse(localStorage.getItem('directorio_colegas') || '[]');
-      const updatedCards = [cardWithStatus, ...stored.filter((c) => c.id !== cardWithStatus.id)];
-      localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
-    } catch (e) {
-      console.error(e);
-    }
-    setCurrentPage(1);
-
-    // Guardar en la nube Supabase de inmediato
-    await saveRemoteDirectorioCard(cardWithStatus);
-
-    // 2. Sincronizar en lista de usuarias registradas
-    const exists = registeredUsers.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
-    if (!exists) {
-      const newUserFromCard = {
-        id: 'usr_' + Date.now(),
-        nombre: cardWithStatus.nombre,
-        correo: cardWithStatus.correo || `usuario_${Date.now()}@sisnets.pe`,
-        telefono: cardWithStatus.telefono,
-        rol: user?.rol === 'admin' ? 'admin' : 'colegiada',
-        condicion: cardWithStatus.condicion,
-        centro: cardWithStatus.institucion,
-        sector: cardWithStatus.sector || 'Comunitario / ONGs',
-        estado: 'activa',
-        verificada: !!cardWithStatus.verificada,
-        fechaRegistro: new Date().toLocaleDateString('es-PE')
-      };
-      const updatedUsers = cleanAndMergeUsers([...registeredUsers, newUserFromCard]);
-      setRegisteredUsers(updatedUsers);
+    if (isEdit) {
+      setMentorCards((prev) => prev.map((c) => (c.id === cardWithStatus.id ? cardWithStatus : c)));
       try {
-        localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+        const stored = JSON.parse(localStorage.getItem('directorio_colegas') || '[]');
+        const updatedCards = stored.map((c) => (c.id === cardWithStatus.id ? cardWithStatus : c));
+        localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
       } catch (e) {
         console.error(e);
       }
-      saveRemoteUser(newUserFromCard);
+      await updateRemoteDirectorioCard(cardWithStatus.id, cardWithStatus);
+    } else {
+      setMentorCards((prev) => [cardWithStatus, ...prev.filter((c) => c.id !== cardWithStatus.id)]);
+      try {
+        const stored = JSON.parse(localStorage.getItem('directorio_colegas') || '[]');
+        const updatedCards = [cardWithStatus, ...stored.filter((c) => c.id !== cardWithStatus.id)];
+        localStorage.setItem('directorio_colegas', JSON.stringify(updatedCards));
+      } catch (e) {
+        console.error(e);
+      }
+      await saveRemoteDirectorioCard(cardWithStatus);
     }
+    setCurrentPage(1);
+
+    // 2. Sincronizar en lista de usuarias registradas si es nuevo
+    if (!isEdit) {
+      const exists = registeredUsers.some((u) => u.correo?.toLowerCase() === cardWithStatus.correo?.toLowerCase());
+      if (!exists) {
+        const newUserFromCard = {
+          id: 'usr_' + Date.now(),
+          nombre: cardWithStatus.nombre,
+          correo: cardWithStatus.correo || `usuario_${Date.now()}@sisnets.pe`,
+          telefono: cardWithStatus.telefono,
+          rol: user?.rol === 'admin' ? 'admin' : 'colegiada',
+          condicion: cardWithStatus.condicion,
+          centro: cardWithStatus.institucion,
+          sector: cardWithStatus.sector || 'Comunitario / ONGs',
+          estado: 'activa',
+          verificada: !!cardWithStatus.verificada,
+          fechaRegistro: new Date().toLocaleDateString('es-PE')
+        };
+        const updatedUsers = cleanAndMergeUsers([...registeredUsers, newUserFromCard]);
+        setRegisteredUsers(updatedUsers);
+        try {
+          localStorage.setItem('usuarios_colegio', JSON.stringify(updatedUsers));
+        } catch (e) {
+          console.error(e);
+        }
+        saveRemoteUser(newUserFromCard);
+      }
+    }
+
+    setEditingCard(null);
 
     Swal.fire({
       icon: 'success',
-      title: '¡Centro Publicado en la Red!',
-      text: 'Tu ficha ya está visible para todas las colegas con tu contacto de WhatsApp.',
+      title: isEdit ? '¡Ficha Actualizada!' : '¡Centro Publicado en la Red!',
+      text: isEdit 
+        ? 'Tus cambios han sido guardados y ya están visibles con el nuevo diseño.'
+        : 'Tu ficha ya está visible para todas las colegas con tu contacto de WhatsApp.',
       confirmButtonColor: '#0A1128',
       timer: 2000,
       showConfirmButton: false
@@ -790,69 +811,10 @@ export default function Landing() {
     });
   };
 
-  const handleEditCard = async (card) => {
-    const isPracticante = card.condicion === 'practicante' || card.tipo?.toLowerCase().includes('practicante');
-    const labelInstitucion = isPracticante ? 'Centro de Prácticas:' : 'Centro Laboral Actual:';
-
-    const { value: formValues } = await Swal.fire({
-      title: 'Editar Ficha del Directorio',
-      html:
-        `<div class="space-y-3 text-left">` +
-        `<label class="block text-xs font-bold text-slate-700">Nombre Completo:</label>` +
-        `<input id="swal-nombre" class="swal2-input !mt-0 !w-full text-xs" value="${card.nombre}">` +
-        `<label class="block text-xs font-bold text-slate-700">${labelInstitucion}</label>` +
-        `<input id="swal-institucion" class="swal2-input !mt-0 !w-full text-xs" value="${card.institucion}">` +
-        `<label class="block text-xs font-bold text-slate-700">Cargo que Ocupas:</label>` +
-        `<input id="swal-cargo" class="swal2-input !mt-0 !w-full text-xs" value="${card.cargo || card.sector || ''}">` +
-        `<label class="block text-xs font-bold text-slate-700">WhatsApp de Contacto:</label>` +
-        `<input id="swal-telefono" class="swal2-input !mt-0 !w-full text-xs" value="${card.telefono}">` +
-        `<label class="block text-xs font-bold text-slate-700">Temáticas de orientación / apoyo:</label>` +
-        `<textarea id="swal-apoyo" class="swal2-textarea !mt-0 !w-full text-xs">${card.apoyo}</textarea>` +
-        `</div>`,
-      focusConfirm: false,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar Cambios',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0A1128',
-      preConfirm: () => {
-        const nombre = document.getElementById('swal-nombre').value;
-        const institucion = document.getElementById('swal-institucion').value;
-        const cargo = document.getElementById('swal-cargo').value;
-        const telefono = document.getElementById('swal-telefono').value;
-        const apoyo = document.getElementById('swal-apoyo').value;
-        if (!nombre || !institucion || !telefono) {
-          Swal.showValidationMessage('Por favor completa nombre, centro y teléfono');
-          return false;
-        }
-        const isPract = card.condicion === 'practicante' || card.tipo?.toLowerCase().includes('practicante');
-        const updatedTipo = isPract ? 'Practicante' : (isMasculineName(nombre) ? 'Egresado' : 'Egresada');
-        return {
-          nombre,
-          institucion,
-          tipo: updatedTipo,
-          cargo: cargo.trim(),
-          sector: (card.sector && card.sector.toLowerCase() !== 'abogada' && card.sector.toLowerCase() !== cargo.trim().toLowerCase()) ? card.sector : 'Salud',
-          telefono,
-          apoyo: apoyo || card.apoyo,
-          fortalezas: (apoyo || card.apoyo).split(' · ')
-        };
-      }
-    });
-
-    if (formValues) {
-      setMentorCards((prev) =>
-        prev.map((c) => (c.id === card.id ? { ...c, ...formValues } : c))
-      );
-      updateRemoteDirectorioCard(card.id, formValues);
-      Swal.fire({
-        icon: 'success',
-        title: 'Ficha Actualizada',
-        text: 'Los cambios ya están visibles en el directorio.',
-        confirmButtonColor: '#0A1128',
-        timer: 1600,
-        showConfirmButton: false
-      });
-    }
+  const handleEditCard = (card) => {
+    setOpenMenuCardId(null);
+    setEditingCard(card);
+    setIsPublishModalOpen(true);
   };
 
   // Enriquecer reactivamente las fichas con la foto más reciente del autor desde registeredUsers o user activo
@@ -1663,10 +1625,14 @@ export default function Landing() {
         <PublicLanding setIsAuthModalOpen={setIsAuthModalOpen} />
       )}
 
-      {/* MODAL PARA PUBLICAR CENTRO Y APOYO */}
+      {/* MODAL PARA PUBLICAR / EDITAR CENTRO Y APOYO */}
       <PublishSupportModal
         isOpen={isPublishModalOpen}
-        onClose={() => setIsPublishModalOpen(false)}
+        initialCard={editingCard}
+        onClose={() => {
+          setIsPublishModalOpen(false);
+          setEditingCard(null);
+        }}
         onPublish={handleAddNewSupport}
       />
 
