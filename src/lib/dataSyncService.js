@@ -60,7 +60,14 @@ export const cleanAndMergeUsers = (parsed) => {
     (u) => u && (u.id === 'admin_ruth' || u.correo?.toLowerCase() === 'ruthanastacio191202@gmail.com')
   );
   const activeRuth = storedRuth
-    ? { ...ADMIN_RUTH_USER, ...storedRuth, rol: storedRuth.rol || 'admin' }
+    ? {
+        ...ADMIN_RUTH_USER,
+        ...storedRuth,
+        avatar: (storedRuth.avatar && storedRuth.avatar !== '/logo.png' && storedRuth.avatar !== '/logo.svg')
+          ? storedRuth.avatar
+          : ADMIN_RUTH_USER.avatar || '/logo.png',
+        rol: storedRuth.rol || 'admin'
+      }
     : ADMIN_RUTH_USER;
 
   // 2. Buscar a Luis
@@ -68,7 +75,14 @@ export const cleanAndMergeUsers = (parsed) => {
     (u) => u && (u.id === 'usr_luis_lacruz' || u.correo?.toLowerCase() === 'luislacruz326@gmail.com')
   );
   const activeLuis = storedLuis
-    ? { ...LUIS_LACRUZ_USER, ...storedLuis, rol: storedLuis.rol || 'admin' }
+    ? {
+        ...LUIS_LACRUZ_USER,
+        ...storedLuis,
+        avatar: (storedLuis.avatar && storedLuis.avatar !== '/logo.png' && storedLuis.avatar !== '/logo.svg')
+          ? storedLuis.avatar
+          : LUIS_LACRUZ_USER.avatar || '/logo.png',
+        rol: storedLuis.rol || 'admin'
+      }
     : LUIS_LACRUZ_USER;
 
   // Safeguard: Si la sesión activa local ya tiene foto personalizada, evitar que un /logo.png desactualizado la pise
@@ -229,13 +243,16 @@ export const saveRemoteUser = async (user) => {
 };
 
 export const updateRemoteUser = async (userId, partialData, userObject = null) => {
-  if (!userId) return false;
+  if (!userId && !userObject?.correo) return false;
   try {
     const sanitizedData = {};
     for (const [key, val] of Object.entries(partialData)) {
+      const lower = key.toLowerCase();
       if (key === 'debeCambiarPassword') sanitizedData.debecambiarpassword = val;
       else if (key === 'fechaRegistro') sanitizedData.fecharegistro = val;
-      else sanitizedData[key.toLowerCase()] = val;
+      else if (VALID_USUARIOS_COLUMNS.has(lower)) {
+        sanitizedData[lower] = val;
+      }
     }
     if (sanitizedData.correo) {
       sanitizedData.correo = sanitizeEmail(sanitizedData.correo);
@@ -244,32 +261,40 @@ export const updateRemoteUser = async (userId, partialData, userObject = null) =
       sanitizedData.password = await hashPassword(sanitizedData.password);
     }
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .update(sanitizedData)
-      .eq('id', String(userId))
-      .select();
+    let updated = false;
 
-    if (error) {
-      console.warn('Error actualizando usuario en Supabase:', error.message);
-      return false;
-    }
-
-    // Si no se encontró por ID pero tenemos el objeto/correo, intentar actualizar por correo o persistir
-    if ((!data || data.length === 0) && userObject?.correo) {
-      const cleanEmail = sanitizeEmail(userObject.correo);
-      const { data: emailData } = await supabase
+    if (userId) {
+      const { data, error } = await supabase
         .from('usuarios')
         .update(sanitizedData)
-        .eq('correo', cleanEmail)
+        .eq('id', String(userId))
         .select();
 
-      if (!emailData || emailData.length === 0) {
-        await saveRemoteUser({ ...userObject, ...partialData });
+      if (!error && data && data.length > 0) {
+        updated = true;
+      } else if (error) {
+        console.warn('Error actualizando usuario por ID en Supabase:', error.message);
       }
     }
 
-    return true;
+    // Si no se actualizó por ID pero tenemos el objeto/correo, intentar actualizar por correo o persistir
+    const targetEmail = sanitizedData.correo || (userObject?.correo ? sanitizeEmail(userObject.correo) : null);
+    if (!updated && targetEmail) {
+      const { data: emailData, error: emailError } = await supabase
+        .from('usuarios')
+        .update(sanitizedData)
+        .eq('correo', targetEmail)
+        .select();
+
+      if (!emailError && emailData && emailData.length > 0) {
+        updated = true;
+      } else if (userObject) {
+        await saveRemoteUser({ ...userObject, ...partialData });
+        updated = true;
+      }
+    }
+
+    return updated;
   } catch (err) {
     console.warn('Error en updateRemoteUser:', err);
     return false;
@@ -369,25 +394,46 @@ export const saveRemoteDirectorioCard = async (card) => {
   }
 };
 
-export const updateRemoteDirectorioCard = async (cardId, partialData) => {
-  if (!cardId) return false;
+export const updateRemoteDirectorioCard = async (cardId, partialData, fallbackFilter = null) => {
   try {
     const payload = {};
     for (const [key, val] of Object.entries(partialData)) {
+      const lower = key.toLowerCase();
       if (key === 'centroTipo') payload.centrotipo = val;
       else if (key === 'cicloEstudio') payload.cicloestudio = val;
-      else payload[key.toLowerCase()] = val;
+      else if (VALID_DIRECTORIO_COLUMNS.has(lower)) {
+        payload[lower] = val;
+      }
     }
 
-    const { error } = await supabase
-      .from('directorio_colegas')
-      .update(payload)
-      .eq('id', String(cardId));
-    if (error) {
-      console.warn('Error actualizando ficha en Supabase:', error.message);
-      return false;
+    if (cardId) {
+      const { error } = await supabase
+        .from('directorio_colegas')
+        .update(payload)
+        .eq('id', String(cardId));
+      if (!error) return true;
+      console.warn('Error actualizando ficha por ID en Supabase:', error.message);
     }
-    return true;
+
+    // Si no hay cardId o falló, intentar actualizar por user_id o correo del autor
+    if (fallbackFilter?.user_id) {
+      const { error: userError } = await supabase
+        .from('directorio_colegas')
+        .update(payload)
+        .eq('user_id', String(fallbackFilter.user_id));
+      if (!userError) return true;
+    }
+
+    if (fallbackFilter?.correo) {
+      const cleanEmail = sanitizeEmail(fallbackFilter.correo);
+      const { error: mailError } = await supabase
+        .from('directorio_colegas')
+        .update(payload)
+        .ilike('correo', cleanEmail);
+      if (!mailError) return true;
+    }
+
+    return false;
   } catch (err) {
     console.warn('Error en updateRemoteDirectorioCard:', err);
     return false;

@@ -892,9 +892,47 @@ export default function Landing() {
     });
   }, [enrichedMentorCards, selectedFilter, searchTerm]);
 
+  // Usuarias enriquecidas reactivamente con su foto de perfil (desde usuario activo o sus fichas publicadas)
+  const enrichedRegisteredUsers = useMemo(() => {
+    return registeredUsers.map((u) => {
+      if (!u) return u;
+      let effectiveAvatar = u.avatar;
+      const uEmail = (u.correo || '').toLowerCase().trim();
+      const cleanUName = (u.nombre || '').toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim();
+
+      // 1. Si es el usuario activo en sesión
+      if (user && (
+        (uEmail && user.correo?.toLowerCase().trim() === uEmail) ||
+        (u.id && user.id === u.id)
+      )) {
+        if (user.avatar && user.avatar !== '/logo.png' && user.avatar !== '/logo.svg') {
+          effectiveAvatar = user.avatar;
+        }
+      }
+
+      // 2. Si no tiene foto personalizada, buscar si tiene una ficha publicada en el directorio con foto
+      if (!effectiveAvatar || effectiveAvatar === '/logo.png' || effectiveAvatar === '/logo.svg') {
+        const matchingCard = mentorCards.find((card) => {
+          if (!card || !card.avatar || card.avatar === '/logo.png' || card.avatar === '/logo.svg') return false;
+          const cardEmail = (card.correo || '').toLowerCase().trim();
+          if (cardEmail && uEmail && cardEmail === uEmail) return true;
+          if (card.user_id && card.user_id === u.id) return true;
+          const cleanCardName = (card.nombre || '').toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim();
+          return cleanUName && cleanCardName && (cleanUName === cleanCardName || cleanUName.includes(cleanCardName) || cleanCardName.includes(cleanUName));
+        });
+
+        if (matchingCard?.avatar) {
+          effectiveAvatar = matchingCard.avatar;
+        }
+      }
+
+      return effectiveAvatar !== u.avatar ? { ...u, avatar: effectiveAvatar } : u;
+    });
+  }, [registeredUsers, mentorCards, user]);
+
   // Usuarias filtradas para la Pestaña de Gestión de Usuarios
   const filteredUsers = useMemo(() => {
-    return registeredUsers.filter((u) => {
+    return enrichedRegisteredUsers.filter((u) => {
       const term = (userSearchTerm || '').trim().toLowerCase();
       const matchSearch = term === '' ||
         (u.nombre && u.nombre.toLowerCase().includes(term)) ||
@@ -912,7 +950,7 @@ export default function Landing() {
 
       return matchSearch && matchRole;
     });
-  }, [registeredUsers, userSearchTerm, userFilterRole]);
+  }, [enrichedRegisteredUsers, userSearchTerm, userFilterRole]);
 
   // Cálculos para la Pestaña de Métricas y Estadísticas
   const metricsData = useMemo(() => {

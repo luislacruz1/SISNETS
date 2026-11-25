@@ -44,7 +44,7 @@ export default function AccountView({
         : 'Posees privilegios directivos para validar usuarias, designar administradoras y gestionar todo el directorio.')
     : 'Colega de la red profesional con acceso al directorio vivo, publicación de fichas institucionales y contactos clave.';
 
-  // Manejador para cargar y convertir foto local a Base64 con vista previa inmediata
+  // Manejador para cargar y comprimir foto a JPEG de alta fidelidad y peso ligero (<50KB)
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -58,29 +58,50 @@ export default function AccountView({
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Archivo demasiado grande',
-        text: 'Te sugerimos una foto menor a 3 MB para asegurar una carga instantánea.'
-      });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = (event) => {
-      const base64 = event.target?.result;
-      if (base64) {
-        setAvatar(base64);
+      const rawUrl = event.target?.result;
+      if (!rawUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        // Redimensionar a un tamaño óptimo para avatares (máx 320x320 px)
+        const canvas = document.createElement('canvas');
+        const maxDim = 320;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Comprimir en JPEG calidad 0.85 (produce ~20-35KB ultrarrápido)
+        const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        setAvatar(optimizedBase64);
+
         Swal.fire({
           toast: true,
           position: 'top-end',
           icon: 'success',
-          title: 'Foto cargada. Recuerda hacer clic en "Guardar Cambios".',
+          title: 'Foto cargada y optimizada. Recuerda hacer clic en "Guardar Cambios".',
           showConfirmButton: false,
           timer: 3000
         });
-      }
+      };
+      img.src = rawUrl;
     };
     reader.readAsDataURL(file);
   };
