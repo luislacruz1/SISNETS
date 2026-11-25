@@ -272,25 +272,28 @@ export default function Login() {
       }
 
       // 2. MODO INICIO DE SESIÓN CON VERIFICACIÓN CRIPTOGRÁFICA
-      let targetUser = usersList.find((u) => u.correo && u.correo.toLowerCase() === cleanCorreo);
+      let targetUser = null;
 
-      // Si no está en local, consultar en Supabase
-      if (!targetUser) {
-        try {
-          const { data: dbUser } = await supabase
-            .from('usuarios')
-            .select('*')
-            .eq('correo', cleanCorreo)
-            .maybeSingle();
-          if (dbUser) {
-            targetUser = dbUser;
-          }
-        } catch (err) {
-          console.warn('Consulta en Supabase:', err);
+      // Consultar SIEMPRE primero en Supabase para obtener el rol y estado real más reciente
+      try {
+        const { data: dbUser, error: dbErr } = await supabase
+          .from('usuarios')
+          .select('*')
+          .ilike('correo', cleanCorreo)
+          .maybeSingle();
+        if (!dbErr && dbUser) {
+          targetUser = dbUser;
         }
+      } catch (err) {
+        console.warn('Consulta en Supabase:', err);
       }
 
-      // Cuentas fundadoras oficiales
+      // Si no hay conexión o no está en Supabase, buscar en la lista local
+      if (!targetUser) {
+        targetUser = usersList.find((u) => u.correo && u.correo.toLowerCase() === cleanCorreo);
+      }
+
+      // Cuentas fundadoras oficiales (fallback inicial si no existían en BD ni local)
       if (!targetUser && isRuth) {
         targetUser = {
           id: 'admin_ruth',
@@ -366,11 +369,12 @@ export default function Login() {
         return;
       }
 
-      // Asegurar que el usuario esté en usuarios_colegio
-      if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === cleanCorreo)) {
-        usersList.unshift(targetUser);
-        localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
-      }
+      // Actualizar o insertar el usuario con su rol fresco en usuarios_colegio
+      const updatedList = usersList.filter((u) => !u.correo || u.correo.toLowerCase() !== cleanCorreo);
+      updatedList.unshift(targetUser);
+      try {
+        localStorage.setItem('usuarios_colegio', JSON.stringify(updatedList));
+      } catch (e) {}
 
       if (formData.remember && formData.correo) {
         localStorage.setItem('sisnets_remember_correo', formData.correo);

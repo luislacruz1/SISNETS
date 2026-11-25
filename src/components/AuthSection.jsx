@@ -235,54 +235,67 @@ export default function AuthSection({ isOpen, onClose }) {
       }
 
       // 2. MODO INICIO DE SESIÓN
-      let targetUser = usersList.find((u) => u.correo && u.correo.toLowerCase() === cleanCorreo);
+      let targetUser = null;
+
+      // Consultar SIEMPRE primero en Supabase para obtener el rol real actualizado
+      try {
+        const { data: dbUser, error: dbErr } = await supabase
+          .from('usuarios')
+          .select('*')
+          .ilike('correo', cleanCorreo)
+          .maybeSingle();
+        if (!dbErr && dbUser) {
+          targetUser = dbUser;
+        }
+      } catch (err) {
+        console.warn('Consulta en Supabase:', err);
+      }
+
+      // Si no está en Supabase o falló la red, buscar en el listado local
+      if (!targetUser) {
+        targetUser = usersList.find((u) => u.correo && u.correo.toLowerCase() === cleanCorreo);
+      }
 
       if (isRuth) {
-        targetUser = {
-          id: 'admin_ruth',
-          nombre: 'Ruth Anastacio',
-          correo: 'ruthanastacio191202@gmail.com',
-          rol: 'admin',
-          condicion: 'egresada',
-          centro: 'SISNETS (Sede Central)',
-          sector: 'Gestión Institucional',
-          telefono: '+51 987 654 321',
-          estado: 'activa',
-          verificada: true,
-          avatar: '/logo.png',
-          metodo: 'Credenciales Directas'
-        };
-
-        if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'ruthanastacio191202@gmail.com')) {
-          usersList.unshift(targetUser);
-          localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        if (!targetUser) {
+          targetUser = {
+            id: 'admin_ruth',
+            nombre: 'Ruth Anastacio',
+            correo: 'ruthanastacio191202@gmail.com',
+            rol: 'admin',
+            condicion: 'egresada',
+            centro: 'SISNETS (Sede Central)',
+            sector: 'Gestión Institucional',
+            telefono: '+51 987 654 321',
+            estado: 'activa',
+            verificada: true,
+            avatar: '/logo.png',
+            metodo: 'Credenciales Directas'
+          };
         }
       } else if (isLuis) {
-        targetUser = {
-          id: 'usr_luis_lacruz',
-          nombre: 'Luis Jhonatan La Cruz Urbano',
-          correo: 'luislacruz326@gmail.com',
-          rol: 'admin',
-          condicion: 'egresada',
-          centro: 'SISNETS (Sede Central)',
-          sector: 'Gestión Institucional',
-          telefono: '+51 958 262 585',
-          estado: 'activa',
-          verificada: true,
-          avatar: '/logo.png',
-          metodo: 'Credenciales Directas'
-        };
-
-        if (!usersList.some((u) => u.correo && u.correo.toLowerCase() === 'luislacruz326@gmail.com')) {
-          usersList.unshift(targetUser);
-          localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
+        if (!targetUser) {
+          targetUser = {
+            id: 'usr_luis_lacruz',
+            nombre: 'Luis Jhonatan La Cruz Urbano',
+            correo: 'luislacruz326@gmail.com',
+            rol: 'admin',
+            condicion: 'egresada',
+            centro: 'SISNETS (Sede Central)',
+            sector: 'Gestión Institucional',
+            telefono: '+51 958 262 585',
+            estado: 'activa',
+            verificada: true,
+            avatar: '/logo.png',
+            metodo: 'Credenciales Directas'
+          };
         }
       } else if (!targetUser) {
         targetUser = {
           id: `usr_${Date.now()}`,
           nombre: cleanCorreo.split('@')[0],
           correo: cleanCorreo,
-          rol: isAdmin ? 'admin' : 'colegiada',
+          rol: 'colegiada',
           condicion: 'egresada',
           centro: 'SISNETS (Comunidad)',
           sector: 'Comunitario / ONGs',
@@ -293,9 +306,14 @@ export default function AuthSection({ isOpen, onClose }) {
           metodo: 'Credenciales Directas',
           fechaRegistro: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
         };
-        usersList.unshift(targetUser);
-        localStorage.setItem('usuarios_colegio', JSON.stringify(usersList));
       }
+
+      // Actualizar usuarios_colegio con el usuario y su rol real
+      const updatedList = usersList.filter((u) => !u.correo || u.correo.toLowerCase() !== cleanCorreo);
+      updatedList.unshift(targetUser);
+      try {
+        localStorage.setItem('usuarios_colegio', JSON.stringify(updatedList));
+      } catch (e) {}
 
       if (formData.remember && formData.correo) {
         localStorage.setItem('sisnets_remember_correo', formData.correo);
@@ -303,7 +321,6 @@ export default function AuthSection({ isOpen, onClose }) {
         localStorage.removeItem('sisnets_remember_correo');
       }
 
-      saveRemoteUser(targetUser);
       login(targetUser);
       window.dispatchEvent(new Event('sisnets_users_updated'));
       if (onClose) onClose();

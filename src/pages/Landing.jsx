@@ -315,7 +315,9 @@ export default function Landing() {
             const hasNewAvatar = freshMe.avatar && freshMe.avatar !== '/logo.png' && freshMe.avatar !== '/logo.svg' && freshMe.avatar !== user.avatar;
             const hasNewName = freshMe.nombre && freshMe.nombre !== user.nombre;
             const hasNewPhone = freshMe.telefono && freshMe.telefono !== user.telefono && freshMe.telefono !== user.celular;
-            if (hasNewAvatar || hasNewName || hasNewPhone) {
+            const hasNewRole = freshMe.rol && freshMe.rol !== user.rol;
+            const hasNewStatus = freshMe.estado && freshMe.estado !== user.estado;
+            if (hasNewAvatar || hasNewName || hasNewPhone || hasNewRole || hasNewStatus) {
               updateUser({
                 ...freshMe,
                 avatar: freshMe.avatar || user.avatar
