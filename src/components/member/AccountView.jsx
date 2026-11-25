@@ -35,8 +35,44 @@ export default function AccountView({
     if (user?.celular || user?.telefono) {
       setCelular(user.celular || user.telefono || '');
     }
-    if (user?.avatar) {
+    if (user?.avatar && user.avatar !== '/logo.png' && user.avatar !== '/logo.svg') {
       setAvatar(user.avatar);
+    } else {
+      // Búsqueda de rescate: si en el dispositivo móvil la sesión local vino sin avatar,
+      // buscar si ya existe la foto en las fichas del directorio o en la lista de usuarios guardada
+      try {
+        const uEmail = (user?.correo || '').toLowerCase().trim();
+        const storedCards = localStorage.getItem('directorio_colegas');
+        if (storedCards && uEmail) {
+          const parsedCards = JSON.parse(storedCards);
+          if (Array.isArray(parsedCards)) {
+            const myCard = parsedCards.find((c) => {
+              const cardMail = (c.correo || '').toLowerCase().trim();
+              return (cardMail && cardMail === uEmail) || (c.user_id && c.user_id === user?.id);
+            });
+            if (myCard?.avatar && myCard.avatar !== '/logo.png' && myCard.avatar !== '/logo.svg') {
+              setAvatar(myCard.avatar);
+              if (updateUser) updateUser({ avatar: myCard.avatar });
+              return;
+            }
+          }
+        }
+
+        const storedUsers = localStorage.getItem('usuarios_colegio');
+        if (storedUsers && uEmail) {
+          const parsedUsers = JSON.parse(storedUsers);
+          if (Array.isArray(parsedUsers)) {
+            const me = parsedUsers.find((u) => {
+              const mail = (u.correo || '').toLowerCase().trim();
+              return (mail && mail === uEmail) || (u.id && u.id === user?.id);
+            });
+            if (me?.avatar && me.avatar !== '/logo.png' && me.avatar !== '/logo.svg') {
+              setAvatar(me.avatar);
+              if (updateUser) updateUser({ avatar: me.avatar });
+            }
+          }
+        }
+      } catch (e) {}
     }
   }, [user]);
 

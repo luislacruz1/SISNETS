@@ -241,41 +241,10 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* 3. Pie con Botón Cerrar Sesión Mejorado y Seguridad */}
+        {/* 3. Pie con Botón Cerrar Sesión */}
         <div className={`border-t border-white/[0.08] bg-[#060B18]/90 mt-auto transition-all duration-300 ${
           isSidebarOpen ? 'p-3.5' : 'p-2.5 flex flex-col items-center'
         }`}>
-          {/* Botón Cambiar Contraseña (Seguridad) */}
-          {isSidebarOpen ? (
-            <button
-              type="button"
-              onClick={onOpenChangePassword}
-              className="w-full px-3.5 py-2.5 mb-2 rounded-2xl bg-white/[0.03] hover:bg-cyan-500/15 text-slate-300 hover:text-white border border-white/[0.06] hover:border-cyan-500/40 flex items-center gap-3 transition-all duration-200 group shadow-sm active:scale-[0.98]"
-              title="Cambiar Contraseña (Seguridad SHA-256)"
-            >
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 flex items-center justify-center shrink-0 group-hover:bg-cyan-500 group-hover:text-white group-hover:scale-105 transition-all shadow-sm">
-                <KeyRound size={16} />
-              </div>
-              <div className="text-left flex-1 min-w-0">
-                <span className="block font-bold text-xs leading-none text-slate-200 group-hover:text-white transition-colors">
-                  Seguridad
-                </span>
-                <span className="block text-[10px] text-slate-400 group-hover:text-cyan-300 font-medium mt-1 leading-none transition-colors">
-                  Cambiar contraseña
-                </span>
-              </div>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenChangePassword}
-              className="w-11 h-11 mb-2 rounded-xl bg-white/[0.04] hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/[0.06] hover:border-cyan-500/30 flex items-center justify-center transition-all mx-auto group active:scale-95 shadow-sm"
-              title="Cambiar Contraseña"
-            >
-              <KeyRound size={17} className="group-hover:rotate-12 transition-transform" />
-            </button>
-          )}
-
           {isSidebarOpen ? (
             <button
               type="button"
@@ -488,30 +457,8 @@ export default function Sidebar({
                 </div>
               </div>
 
-              {/* Botón Cerrar Sesión y Seguridad en Drawer Móvil */}
+              {/* Botón Cerrar Sesión en Drawer Móvil */}
               <div className="p-3.5 border-t border-white/[0.08] bg-[#060B18]/90 mt-auto">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileSidebarOpen(false);
-                    if (onOpenChangePassword) onOpenChangePassword();
-                  }}
-                  className="w-full px-3.5 py-3 mb-2 rounded-2xl bg-white/[0.03] hover:bg-cyan-500/15 text-slate-300 hover:text-white border border-white/[0.06] hover:border-cyan-500/40 flex items-center gap-3 transition-all text-xs font-bold group shadow-sm active:scale-[0.98]"
-                  title="Cambiar Contraseña"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 flex items-center justify-center shrink-0 group-hover:bg-cyan-500 group-hover:text-white group-hover:scale-105 transition-all shadow-sm">
-                    <KeyRound size={16} />
-                  </div>
-                  <div className="text-left flex-1 min-w-0">
-                    <span className="block font-bold text-xs leading-none text-slate-200 group-hover:text-white transition-colors">
-                      Seguridad
-                    </span>
-                    <span className="block text-[10px] text-slate-400 group-hover:text-cyan-300 font-medium mt-1 leading-none transition-colors">
-                      Cambiar contraseña
-                    </span>
-                  </div>
-                </button>
-
                 <button
                   type="button"
                   onClick={handleLogout}
