@@ -1,11 +1,13 @@
 import React from 'react';
 import { Menu } from 'lucide-react';
+import { isMasculineName } from '../../utils/genderHelper';
 
 export default function Navbar({
   isSidebarOpen,
   toggleSidebar,
   user,
-  getUserInitials
+  getUserInitials,
+  onNavigateToAccount
 }) {
   return (
     <header className="sticky top-0 z-30 bg-white dark:bg-[#0c1527] border-b border-slate-200 dark:border-slate-800 h-16 px-3 sm:px-8 flex items-center justify-between shadow-2xs transition-colors">
@@ -45,17 +47,32 @@ export default function Navbar({
             {user?.nombre?.replace(/^(Mg\.|Lic\.|Dr\.|Dra\.|Bach\.)\s+/i, '') || user?.nombre}
           </span>
           <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider block mt-0.5">
-            {user?.rol === 'admin' ? 'ADMIN' : (user?.condicion === 'practicante' ? 'PRACTICANTE' : 'COLEGIADA')}
+            {user?.rol === 'admin'
+              ? (isMasculineName(user?.nombre) ? 'ADMINISTRADOR' : 'ADMINISTRADORA')
+              : (user?.condicion === 'practicante'
+                  ? 'PRACTICANTE'
+                  : 'COLEGA')}
           </span>
         </div>
 
-        {/* Avatar Squircle con Iniciales (Informativo, la sesión se cierra desde el Sidebar) */}
-        <div
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-md shrink-0 border border-white/15 select-none"
-          title={user?.nombre}
-        >
-          {getUserInitials(user?.nombre)}
-        </div>
+        {/* Avatar Squircle con Foto o Iniciales */}
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt={user.nombre}
+            onClick={() => onNavigateToAccount && onNavigateToAccount()}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover shrink-0 shadow-md ring-2 ring-cyan-500/30 cursor-pointer hover:scale-105 transition"
+            title={`${user?.nombre} (Ir a Mi Cuenta)`}
+          />
+        ) : (
+          <div
+            onClick={() => onNavigateToAccount && onNavigateToAccount()}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-md shrink-0 border border-white/15 select-none cursor-pointer hover:scale-105 transition"
+            title={`${user?.nombre} (Ir a Mi Cuenta)`}
+          >
+            {getUserInitials(user?.nombre)}
+          </div>
+        )}
       </div>
     </header>
   );

@@ -6,9 +6,8 @@ import {
   LogOut,
   KeyRound,
   X,
-  UserCheck,
-  Star,
-  HeartHandshake
+  FileText,
+  UserCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -173,103 +172,71 @@ export default function Sidebar({
               {/* TABS PARA COLEGIADAS / USUARIAS GENERALES */}
               {user?.rol !== 'admin' && (
                 <>
-                  {/* Tab Mi Ficha Profesional */}
+                  {/* Tab Mis Fichas */}
                   <button
                     type="button"
-                    onClick={() => setAdminTab('mi-ficha')}
+                    onClick={() => setAdminTab('mis-fichas')}
                     className={`w-full rounded-2xl transition-all duration-200 group relative ${
                       isSidebarOpen
                         ? 'px-3.5 py-3 text-xs font-bold flex items-center gap-3'
                         : 'w-11 h-11 mx-auto flex items-center justify-center'
                     } ${
-                      adminTab === 'mi-ficha'
+                      adminTab === 'mis-fichas'
                         ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
                         : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                     }`}
-                    title="Mi Ficha Profesional"
+                    title="Mis Fichas Publicadas"
                   >
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                      adminTab === 'mi-ficha'
+                      adminTab === 'mis-fichas'
                         ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
                         : 'bg-white/[0.04] text-slate-400 group-hover:text-cyan-300 group-hover:bg-white/[0.08]'
                     }`}>
-                      <UserCheck size={17} />
+                      <FileText size={17} />
                     </div>
                     {isSidebarOpen && (
                       <>
-                        <span className="font-bold text-xs truncate">Mi Ficha</span>
-                        {adminTab === 'mi-ficha' && (
+                        <span className="font-bold text-xs truncate">Mis Fichas</span>
+                        {adminTab === 'mis-fichas' && (
                           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  {/* Tab Mis Favoritas */}
-                  <button
-                    type="button"
-                    onClick={() => setAdminTab('favoritas')}
-                    className={`w-full rounded-2xl transition-all duration-200 group relative ${
-                      isSidebarOpen
-                        ? 'px-3.5 py-3 text-xs font-bold flex items-center gap-3'
-                        : 'w-11 h-11 mx-auto flex items-center justify-center'
-                    } ${
-                      adminTab === 'favoritas'
-                        ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                    }`}
-                    title="Mis Contactos Clave"
-                  >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                      adminTab === 'favoritas'
-                        ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-[#050B18] shadow-md shadow-amber-400/30'
-                        : 'bg-white/[0.04] text-slate-400 group-hover:text-amber-300 group-hover:bg-white/[0.08]'
-                    }`}>
-                      <Star size={17} className={adminTab === 'favoritas' ? 'fill-[#050B18]' : ''} />
-                    </div>
-                    {isSidebarOpen && (
-                      <>
-                        <span className="font-bold text-xs truncate">Mis Favoritas</span>
-                        {adminTab === 'favoritas' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400 ml-auto animate-pulse" />
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  {/* Tab Muro de Alianzas */}
-                  <button
-                    type="button"
-                    onClick={() => setAdminTab('comunidad')}
-                    className={`w-full rounded-2xl transition-all duration-200 group relative ${
-                      isSidebarOpen
-                        ? 'px-3.5 py-3 text-xs font-bold flex items-center gap-3'
-                        : 'w-11 h-11 mx-auto flex items-center justify-center'
-                    } ${
-                      adminTab === 'comunidad'
-                        ? 'bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-transparent text-white border-l-4 border-l-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/10 font-black'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                    }`}
-                    title="Muro de Alianzas"
-                  >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                      adminTab === 'comunidad'
-                        ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-[#050B18] shadow-md shadow-emerald-400/30'
-                        : 'bg-white/[0.04] text-slate-400 group-hover:text-emerald-300 group-hover:bg-white/[0.08]'
-                    }`}>
-                      <HeartHandshake size={17} />
-                    </div>
-                    {isSidebarOpen && (
-                      <>
-                        <span className="font-bold text-xs truncate">Muro de Alianzas</span>
-                        {adminTab === 'comunidad' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 ml-auto animate-pulse" />
                         )}
                       </>
                     )}
                   </button>
                 </>
               )}
+
+              {/* TAB COMÚN: MI CUENTA (Para todas las usuarias y administradoras) */}
+              <button
+                type="button"
+                onClick={() => setAdminTab('cuenta')}
+                className={`w-full rounded-2xl transition-all duration-200 group relative ${
+                  isSidebarOpen
+                    ? 'px-3.5 py-3 text-xs font-bold flex items-center gap-3'
+                    : 'w-11 h-11 mx-auto flex items-center justify-center'
+                } ${
+                  adminTab === 'cuenta'
+                    ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                }`}
+                title="Mi Cuenta & Perfil"
+              >
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                  adminTab === 'cuenta'
+                    ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
+                    : 'bg-white/[0.04] text-slate-400 group-hover:text-cyan-300 group-hover:bg-white/[0.08]'
+                }`}>
+                  <UserCircle size={17} />
+                </div>
+                {isSidebarOpen && (
+                  <>
+                    <span className="font-bold text-xs truncate">Mi Cuenta</span>
+                    {adminTab === 'cuenta' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
+                    )}
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -473,71 +440,50 @@ export default function Sidebar({
                       <>
                         <button
                           type="button"
-                          onClick={() => { setAdminTab('mi-ficha'); setIsMobileSidebarOpen(false); }}
+                          onClick={() => { setAdminTab('mis-fichas'); setIsMobileSidebarOpen(false); }}
                           className={`w-full px-3.5 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition-all ${
-                            adminTab === 'mi-ficha'
+                            adminTab === 'mis-fichas'
                               ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
                               : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                           }`}
                         >
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                            adminTab === 'mi-ficha'
+                            adminTab === 'mis-fichas'
                               ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
                               : 'text-slate-400 bg-white/[0.04]'
                           }`}>
-                            <UserCheck size={17} />
+                            <FileText size={17} />
                           </div>
-                          <span>Mi Ficha</span>
-                          {adminTab === 'mi-ficha' && (
+                          <span>Mis Fichas</span>
+                          {adminTab === 'mis-fichas' && (
                             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => { setAdminTab('favoritas'); setIsMobileSidebarOpen(false); }}
-                          className={`w-full px-3.5 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition-all ${
-                            adminTab === 'favoritas'
-                              ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
-                              : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                          }`}
-                        >
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                            adminTab === 'favoritas'
-                              ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-[#050B18] shadow-md shadow-amber-400/30'
-                              : 'text-slate-400 bg-white/[0.04]'
-                          }`}>
-                            <Star size={17} className={adminTab === 'favoritas' ? 'fill-[#050B18]' : ''} />
-                          </div>
-                          <span>Mis Favoritas</span>
-                          {adminTab === 'favoritas' && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400 ml-auto animate-pulse" />
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => { setAdminTab('comunidad'); setIsMobileSidebarOpen(false); }}
-                          className={`w-full px-3.5 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition-all ${
-                            adminTab === 'comunidad'
-                              ? 'bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-transparent text-white border-l-4 border-l-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/10 font-black'
-                              : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                          }`}
-                        >
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                            adminTab === 'comunidad'
-                              ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-[#050B18] shadow-md shadow-emerald-400/30'
-                              : 'text-slate-400 bg-white/[0.04]'
-                          }`}>
-                            <HeartHandshake size={17} />
-                          </div>
-                          <span>Muro de Alianzas</span>
-                          {adminTab === 'comunidad' && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 ml-auto animate-pulse" />
                           )}
                         </button>
                       </>
                     )}
+
+                    {/* Tab Común en Móvil: Mi Cuenta */}
+                    <button
+                      type="button"
+                      onClick={() => { setAdminTab('cuenta'); setIsMobileSidebarOpen(false); }}
+                      className={`w-full px-3.5 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition-all ${
+                        adminTab === 'cuenta'
+                          ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        adminTab === 'cuenta'
+                          ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
+                          : 'text-slate-400 bg-white/[0.04]'
+                      }`}>
+                        <UserCircle size={17} />
+                      </div>
+                      <span>Mi Cuenta</span>
+                      {adminTab === 'cuenta' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

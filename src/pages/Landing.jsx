@@ -19,8 +19,9 @@ import {
   GraduationCap,
   Crown,
   UserX,
-  Star,
-  HeartHandshake
+  FileText,
+  UserCircle,
+  KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
@@ -36,9 +37,8 @@ import ColleagueCard from '../components/directory/ColleagueCard';
 import UsersManagement from '../components/admin/UsersManagement';
 import MetricsView from '../components/admin/MetricsView';
 import PublicLanding from '../components/public/PublicLanding';
-import MyProfileView from '../components/member/MyProfileView';
-import SavedContactsView from '../components/member/SavedContactsView';
-import { CommunityBoardView } from '../components/member/CommunityBoardView';
+import MyCardsView from '../components/member/MyCardsView';
+import AccountView from '../components/member/AccountView';
 import { INITIAL_REGISTERED_USERS, ADMIN_RUTH_USER, LUIS_LACRUZ_USER } from '../data/demoData';
 import { isMasculineName } from '../utils/genderHelper';
 import {
@@ -133,7 +133,7 @@ export default function Landing() {
   const [adminTab, setAdminTabState] = useState(() => {
     try {
       const savedTab = localStorage.getItem('sisnets_active_admin_tab');
-      if (savedTab && ['directorio', 'usuarios', 'metricas', 'mi-ficha', 'favoritas', 'comunidad'].includes(savedTab)) {
+      if (savedTab && ['directorio', 'usuarios', 'metricas', 'mis-fichas', 'cuenta'].includes(savedTab)) {
         return savedTab;
       }
     } catch (e) {
@@ -149,39 +149,6 @@ export default function Landing() {
     } catch (e) {
       console.error(e);
     }
-  };
-
-  // Contactos clave / favoritas guardadas en localStorage
-  const [favoriteIds, setFavoriteIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sisnets_favorite_card_ids');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const handleToggleFavorite = (card) => {
-    if (!card?.id) return;
-    setFavoriteIds((prev) => {
-      const exists = prev.includes(card.id);
-      const next = exists ? prev.filter((id) => id !== card.id) : [...prev, card.id];
-      try {
-        localStorage.setItem('sisnets_favorite_card_ids', JSON.stringify(next));
-      } catch (e) {}
-
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: exists ? 'info' : 'success',
-        title: exists ? 'Removida de contactos clave' : 'Guardada en contactos clave',
-        showConfirmButton: false,
-        timer: 1800,
-        timerProgressBar: true
-      });
-
-      return next;
-    });
   };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Control de colapso en escritorio
@@ -406,6 +373,9 @@ export default function Landing() {
   const handleAddNewSupport = async (newCard) => {
     const cardWithStatus = {
       ...newCard,
+      user_id: user?.id || newCard.user_id || `usr_${Date.now()}`,
+      correo: newCard.correo || user?.correo || '',
+      avatar: (newCard.avatar && newCard.avatar !== '/logo.png' && newCard.avatar !== '/logo.svg') ? newCard.avatar : (user?.avatar || ''),
       verificada: user?.rol === 'admin' ? true : !!newCard.verificada
     };
 
@@ -863,9 +833,46 @@ export default function Landing() {
     }
   };
 
+  // Enriquecer reactivamente las fichas con la foto más reciente del autor desde registeredUsers o user activo
+  const enrichedMentorCards = useMemo(() => {
+    return mentorCards.map((card) => {
+      if (!card) return card;
+      const cardEmail = (card.correo || '').toLowerCase().trim();
+      const cleanCardName = (card.nombre || '').toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim();
+
+      // 1. Si el usuario en sesión es el autor y tiene foto de perfil
+      const isSessionUser = user && (
+        (cardEmail && user.correo?.toLowerCase().trim() === cardEmail) ||
+        (card.user_id && card.user_id === user.id) ||
+        (card.usuario_id && card.usuario_id === user.id) ||
+        (card.creadoPor && card.creadoPor === user.id) ||
+        (cleanCardName && user.nombre?.toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim() === cleanCardName)
+      );
+
+      if (isSessionUser && user.avatar && user.avatar !== '/logo.png' && user.avatar !== '/logo.svg') {
+        return { ...card, avatar: user.avatar };
+      }
+
+      // 2. Buscar en registeredUsers
+      const author = registeredUsers.find((u) => {
+        const uEmail = (u.correo || '').toLowerCase().trim();
+        if (cardEmail && uEmail && cardEmail === uEmail) return true;
+        if ((card.user_id && card.user_id === u.id) || (card.usuario_id && card.usuario_id === u.id) || (card.creadoPor && card.creadoPor === u.id)) return true;
+        const uName = (u.nombre || '').toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim();
+        return cleanCardName && uName && (cleanCardName === uName || cleanCardName.includes(uName) || uName.includes(cleanCardName));
+      });
+
+      if (author?.avatar && author.avatar !== '/logo.png' && author.avatar !== '/logo.svg') {
+        return { ...card, avatar: author.avatar };
+      }
+
+      return card;
+    });
+  }, [mentorCards, registeredUsers, user]);
+
   // Filtrado reactivo en el portal privado con protecciones contra nulos
   const filteredCards = useMemo(() => {
-    return mentorCards.filter((card) => {
+    return enrichedMentorCards.filter((card) => {
       if (!card) return false;
       let matchFilter = true;
       if (selectedFilter === 'egresada' || selectedFilter === 'Egresada(o)') {
@@ -883,7 +890,7 @@ export default function Landing() {
         (card.sector && card.sector.toLowerCase().includes(term));
       return matchFilter && matchSearch;
     });
-  }, [mentorCards, selectedFilter, searchTerm]);
+  }, [enrichedMentorCards, selectedFilter, searchTerm]);
 
   // Usuarias filtradas para la Pestaña de Gestión de Usuarios
   const filteredUsers = useMemo(() => {
@@ -956,15 +963,139 @@ export default function Landing() {
     };
   }, [registeredUsers, mentorCards]);
 
-  // Ficha de la propia usuaria logueada (para banner "Mi Ficha")
-  const miFicha = useMemo(() => {
-    if (!user) return null;
-    return mentorCards.find(
-      (c) =>
-        (c.correo && user.correo && c.correo.toLowerCase() === user.correo.toLowerCase()) ||
-        (c.nombre && user.nombre && c.nombre.toLowerCase() === user.nombre.toLowerCase())
-    );
-  }, [user, mentorCards]);
+  // Listado de todas las fichas pertenecientes a la usuaria logueada
+  const myCards = useMemo(() => {
+    if (!user) return [];
+    const userEmail = (user.correo || '').toLowerCase().trim();
+    const cleanUserName = (user.nombre || user.nombreCompleto || '')
+      .toLowerCase()
+      .replace(/^(lic\.|licenciado|licenciada)\s*/i, '')
+      .trim();
+
+    return enrichedMentorCards.filter((c) => {
+      const cardEmail = (c.correo || '').toLowerCase().trim();
+      const cleanCardName = (c.nombre || '')
+        .toLowerCase()
+        .replace(/^(lic\.|licenciado|licenciada)\s*/i, '')
+        .trim();
+      return (
+        (userEmail && cardEmail === userEmail) ||
+        (c.user_id && c.user_id === user.id) ||
+        (c.usuario_id && c.usuario_id === user.id) ||
+        (c.creadoPor && c.creadoPor === user.id) ||
+        (cleanUserName && cleanCardName && (cleanUserName === cleanCardName || cleanCardName.includes(cleanUserName) || cleanUserName.includes(cleanCardName)))
+      );
+    });
+  }, [enrichedMentorCards, user]);
+
+  // Fichas filtradas de la propia usuaria con la barra de búsqueda y selector
+  const filteredMyCards = useMemo(() => {
+    return myCards.filter((card) => {
+      if (!card) return false;
+      let matchFilter = true;
+      if (selectedFilter === 'egresada' || selectedFilter === 'Egresada(o)') {
+        matchFilter = card.condicion === 'egresada' || (card.tipo && card.tipo.toLowerCase().includes('egresad'));
+      } else if (selectedFilter === 'practicante' || selectedFilter === 'Practicante') {
+        matchFilter = card.condicion === 'practicante' || (card.tipo && card.tipo.toLowerCase().includes('practicant'));
+      }
+
+      const term = (searchTerm || '').trim().toLowerCase();
+      const matchSearch = term === '' ||
+        (card.nombre && card.nombre.toLowerCase().includes(term)) ||
+        (card.institucion && card.institucion.toLowerCase().includes(term)) ||
+        (card.cargo && card.cargo.toLowerCase().includes(term)) ||
+        (card.apoyo && card.apoyo.toLowerCase().includes(term)) ||
+        (card.sector && card.sector.toLowerCase().includes(term));
+      return matchFilter && matchSearch;
+    });
+  }, [myCards, selectedFilter, searchTerm]);
+
+  // Sincronización completa de actualización de perfil (foto, nombre, teléfono)
+  const handleSaveProfile = async (updatedUserData) => {
+    // 1. Actualizar usuario en contexto
+    if (updateUser) {
+      updateUser(updatedUserData);
+    }
+
+    // 2. Actualizar lista de registeredUsers (para que Administradoras lo vean inmediatamente en Usuarios)
+    setRegisteredUsers((prev) => {
+      const next = prev.map((u) => {
+        if (
+          u.id === updatedUserData.id ||
+          (u.correo && updatedUserData.correo && u.correo.toLowerCase() === updatedUserData.correo.toLowerCase())
+        ) {
+          return { ...u, ...updatedUserData };
+        }
+        return u;
+      });
+      try {
+        localStorage.setItem('usuarios_colegio', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    // 3. Persistir usuario en Supabase
+    if (updatedUserData.id) {
+      await updateRemoteUser(updatedUserData.id, updatedUserData, updatedUserData);
+    }
+
+    // 4. Actualizar todas las fichas del directorio publicadas por este usuario con la nueva foto
+    const userEmail = (updatedUserData.correo || '').toLowerCase().trim();
+    const cleanUserName = (updatedUserData.nombre || updatedUserData.nombreCompleto || '')
+      .toLowerCase()
+      .replace(/^(lic\.|licenciado|licenciada)\s*/i, '')
+      .trim();
+
+    const cardsToUpdate = [];
+    setMentorCards((prev) => {
+      const next = prev.map((card) => {
+        const cardEmail = (card.correo || '').toLowerCase().trim();
+        const cleanCardName = (card.nombre || '')
+          .toLowerCase()
+          .replace(/^(lic\.|licenciado|licenciada)\s*/i, '')
+          .trim();
+        const isOwner =
+          (userEmail && cardEmail === userEmail) ||
+          (card.user_id && card.user_id === updatedUserData.id) ||
+          (card.usuario_id && card.usuario_id === updatedUserData.id) ||
+          (card.creadoPor && card.creadoPor === updatedUserData.id) ||
+          (cleanUserName && cleanCardName && (cleanUserName === cleanCardName || cleanCardName.includes(cleanUserName) || cleanUserName.includes(cleanCardName)));
+
+        if (isOwner) {
+          const updatedCard = {
+            ...card,
+            avatar: updatedUserData.avatar || card.avatar,
+            nombre: updatedUserData.nombre || card.nombre,
+            telefono: updatedUserData.celular || updatedUserData.telefono || card.telefono
+          };
+          cardsToUpdate.push(updatedCard);
+          return updatedCard;
+        }
+        return card;
+      });
+
+      try {
+        localStorage.setItem('directorio_colegas', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    // 5. Persistir cada ficha actualizada en Supabase (tabla directorio_colegas)
+    for (const card of cardsToUpdate) {
+      try {
+        await updateRemoteDirectorioCard(card.id, {
+          avatar: card.avatar,
+          nombre: card.nombre,
+          telefono: card.telefono
+        });
+      } catch (err) {
+        console.warn('Error sincronizando foto en Supabase directorio:', err);
+      }
+    }
+
+    window.dispatchEvent(new Event('sisnets_users_updated'));
+    window.dispatchEvent(new Event('sisnets_directorio_updated'));
+  };
 
   // Cálculos de Paginación
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / itemsPerPage));
@@ -1022,6 +1153,7 @@ export default function Landing() {
               toggleSidebar={toggleSidebar}
               user={user}
               getUserInitials={getUserInitials}
+              onNavigateToAccount={() => setAdminTab('cuenta')}
             />
 
             {/* 2. CABECERA DE PÁGINA (ESTILO SISGEIN) */}
@@ -1036,12 +1168,10 @@ export default function Landing() {
                         <BookUser size={22} />
                       ) : adminTab === 'usuarios' ? (
                         <Users size={22} />
-                      ) : adminTab === 'mi-ficha' ? (
-                        <UserCheck size={22} />
-                      ) : adminTab === 'favoritas' ? (
-                        <Star size={22} className="fill-amber-400 text-amber-400" />
-                      ) : adminTab === 'comunidad' ? (
-                        <HeartHandshake size={22} />
+                      ) : adminTab === 'mis-fichas' ? (
+                        <FileText size={22} />
+                      ) : adminTab === 'cuenta' ? (
+                        <UserCircle size={22} />
                       ) : (
                         <BarChart3 size={22} />
                       )}
@@ -1052,13 +1182,11 @@ export default function Landing() {
                           ? 'Directorio'
                           : adminTab === 'usuarios'
                             ? 'Usuarios'
-                            : adminTab === 'mi-ficha'
-                              ? 'Mi Ficha Profesional'
-                              : adminTab === 'favoritas'
-                                ? 'Mis Contactos Clave'
-                                : adminTab === 'comunidad'
-                                  ? 'Muro de Alianzas & Apoyo'
-                                  : 'Métricas & Reportes'}
+                            : adminTab === 'mis-fichas'
+                              ? 'Mis Fichas'
+                              : adminTab === 'cuenta'
+                                ? 'Mi Cuenta'
+                                : 'Métricas & Reportes'}
                         <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold px-2.5 py-0.5 rounded-full shrink-0 uppercase tracking-widest">
                           SISNETS
                         </span>
@@ -1068,13 +1196,11 @@ export default function Landing() {
                           ? 'Directorio de Colegas'
                           : adminTab === 'usuarios'
                             ? 'Gestión y validación de miembros de la red'
-                            : adminTab === 'mi-ficha'
-                              ? 'Revisa y mantén actualizada tu presentación y datos de contacto'
-                              : adminTab === 'favoritas'
-                                ? 'Tus colegas guardadas organizadas por sector de intervención'
-                                : adminTab === 'comunidad'
-                                  ? 'Espacio solidario de interconsultas, convocatorias y modelos de informes'
-                                  : 'Indicadores de articulación institucional'}
+                            : adminTab === 'mis-fichas'
+                              ? 'Gestión y visualización de todas tus tarjetas institucionales'
+                              : adminTab === 'cuenta'
+                                ? 'Administra tus datos personales, foto de perfil y contraseña'
+                                : 'Indicadores de articulación institucional'}
                       </p>
                     </div>
                   </div>
@@ -1122,30 +1248,30 @@ export default function Landing() {
                       </button>
                     )}
 
-                    {adminTab === 'mi-ficha' && (
+                    {adminTab === 'mis-fichas' && (
                       <button
                         type="button"
                         onClick={() => setIsPublishModalOpen(true)}
-                        className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
+                        className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#050B18] px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-cyan-500/20 active:scale-95 transition-all text-xs sm:text-sm font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer"
                       >
-                        <Plus size={18} /> Publicar o Editar Mi Ficha
+                        <Plus size={18} strokeWidth={3} /> Publicar Nueva Ficha
                       </button>
                     )}
 
-                    {(adminTab === 'favoritas' || adminTab === 'comunidad') && (
+                    {adminTab === 'cuenta' && (
                       <button
                         type="button"
-                        onClick={() => setAdminTab('directorio')}
-                        className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10"
+                        onClick={() => setIsChangePassModalOpen(true)}
+                        className="bg-gradient-to-r from-[#1E2B58] via-[#16224D] to-[#0A1128] hover:from-[#25366D] hover:via-[#1E2B58] hover:to-[#0F172A] text-white px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-[#0A1128]/20 active:scale-95 transition-all text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/10 cursor-pointer"
                       >
-                        <BookUser size={18} /> Explorar Directorio
+                        <KeyRound size={17} /> Cambiar Contraseña
                       </button>
                     )}
                   </div>
                 </div>
 
                 {/* BARRA DE FILTROS (BÚSQUEDA SUAVE + DESPLEGABLE MODERNO) */}
-                {(adminTab === 'directorio' || (user?.rol === 'admin' && adminTab === 'usuarios')) && (
+                {(adminTab === 'directorio' || adminTab === 'mis-fichas' || (user?.rol === 'admin' && adminTab === 'usuarios')) && (
                   <div className="flex flex-col sm:flex-row gap-3 mt-1">
                     <div className="relative flex-1 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0A1128] dark:group-focus-within:text-blue-400 transition-colors" size={20} />
@@ -1154,7 +1280,9 @@ export default function Landing() {
                         placeholder={
                           adminTab === 'usuarios'
                             ? 'Buscar colega por nombre, correo o teléfono...'
-                            : 'Buscar en el directorio...'
+                            : adminTab === 'mis-fichas'
+                              ? 'Buscar en mis fichas por centro, cargo o apoyo...'
+                              : 'Buscar en el directorio...'
                         }
                         value={adminTab === 'usuarios' ? userSearchTerm : searchTerm}
                         onChange={(e) => {
@@ -1279,67 +1407,6 @@ export default function Landing() {
 
             {/* 3. CONTENIDO PRINCIPAL POR TAB */}
             <div className="py-4 sm:py-6 px-3.5 sm:px-8 w-full space-y-4 sm:space-y-6 flex-1">
-              {/* BANNER "MI FICHA" (Solo en vista de Directorio para Colegiadas No-Admin) */}
-              {adminTab === 'directorio' && user.rol !== 'admin' && (
-                miFicha ? (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-transparent border-2 border-cyan-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-white flex items-center justify-center font-black shadow-md shadow-cyan-500/30 shrink-0">
-                        <Sparkles size={20} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
-                            Tu Ficha Activa en la Red
-                          </span>
-                          {miFicha.verificada ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[9px] font-black uppercase tracking-wider border border-amber-400/50">
-                              <ShieldCheck size={10} className="text-amber-500" />
-                              Sello Oficial Verificado
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-bold uppercase tracking-wider">
-                              En Revisión
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="font-black text-sm text-[#0A1128] dark:text-white mt-0.5 truncate">
-                          {miFicha.institucion} ({miFicha.sector})
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                          WhatsApp: {miFicha.telefono} · Correo: {miFicha.correo}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleEditCard(miFicha)}
-                      className="px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0A1128] dark:text-white border border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-wider rounded-xl shadow-xs transition flex items-center gap-1.5 shrink-0"
-                    >
-                      <Edit3 size={14} className="text-cyan-500" />
-                      <span>Editar Mi Ficha</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent border border-amber-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-                        <Sparkles size={16} />
-                      </div>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Aún no has registrado tu centro institucional. ¡Publica tu ficha para que otras colegas puedan contactarte por WhatsApp!
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsPublishModalOpen(true)}
-                      className="px-3.5 py-1.5 bg-gradient-to-r from-cyan-400 to-blue-500 text-[#050B18] font-black text-xs uppercase tracking-wider rounded-xl shadow-sm hover:scale-105 transition shrink-0"
-                    >
-                      + Publicar Mi Ficha
-                    </button>
-                  </div>
-                )
-              )}
 
               {/* TAB 1: DIRECTORIO VIVO DE COLEGAS CON ANIMACIÓN DINÁMICA */}
               {adminTab === 'directorio' && (
@@ -1355,13 +1422,12 @@ export default function Landing() {
                             key={card.id}
                             card={card}
                             user={user}
+                            registeredUsers={registeredUsers}
                             openMenuCardId={openMenuCardId}
                             setOpenMenuCardId={setOpenMenuCardId}
                             handleEditCard={handleEditCard}
                             handleDeleteCard={handleDeleteCard}
                             handleContactClick={handleContactClick}
-                            isFavorite={favoriteIds.includes(card.id)}
-                            onToggleFavorite={handleToggleFavorite}
                           />
                         ))}
                       </AnimatePresence>
@@ -1479,35 +1545,27 @@ export default function Landing() {
                 />
               )}
 
-              {/* TAB 4 (MIEMBRO): MI FICHA PROFESIONAL */}
-              {adminTab === 'mi-ficha' && (
-                <MyProfileView
+              {/* TAB 4: MIS FICHAS PUBLICADAS */}
+              {adminTab === 'mis-fichas' && (
+                <MyCardsView
                   user={user}
-                  miFicha={miFicha}
-                  onOpenPublishModal={() => {
-                    if (miFicha) {
-                      handleEditCard(miFicha);
-                    } else {
-                      setIsPublishModalOpen(true);
-                    }
-                  }}
+                  myCards={filteredMyCards}
+                  registeredUsers={registeredUsers}
+                  onOpenPublishModal={() => setIsPublishModalOpen(true)}
+                  onEditCard={handleEditCard}
+                  onDeleteCard={handleDeleteCard}
+                  onContactClick={handleContactClick}
                 />
               )}
 
-              {/* TAB 5 (MIEMBRO): CONTACTOS CLAVE / FAVORITAS */}
-              {adminTab === 'favoritas' && (
-                <SavedContactsView
-                  mentorCards={mentorCards}
-                  favoriteIds={favoriteIds}
-                  onToggleFavorite={handleToggleFavorite}
-                  onNavigateToDirectorio={() => setAdminTab('directorio')}
-                />
-              )}
-
-              {/* TAB 6 (MIEMBRO): MURO DE ALIANZAS & APOYO */}
-              {adminTab === 'comunidad' && (
-                <CommunityBoardView
-                  currentUser={user}
+              {/* TAB 5: MI CUENTA */}
+              {adminTab === 'cuenta' && (
+                <AccountView
+                  user={user}
+                  updateUser={updateUser}
+                  onOpenChangePassword={() => setIsChangePassModalOpen(true)}
+                  onNavigateToCards={() => setAdminTab('mis-fichas')}
+                  onSaveProfile={handleSaveProfile}
                 />
               )}
             </div>

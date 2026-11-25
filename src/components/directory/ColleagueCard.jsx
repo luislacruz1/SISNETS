@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   User,
   Building2,
@@ -8,8 +8,7 @@ import {
   MoreVertical,
   Edit3,
   Trash2,
-  Check,
-  Star
+  Check
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { isMasculineName, formatTitleCase } from '../../utils/genderHelper';
@@ -33,16 +32,38 @@ const formatFortalezaText = (text) => {
 export default function ColleagueCard({
   card,
   user,
+  registeredUsers = [],
   openMenuCardId,
   setOpenMenuCardId,
   handleEditCard,
   handleDeleteCard,
-  handleContactClick,
-  isFavorite = false,
-  onToggleFavorite
+  handleContactClick
 }) {
+  const [imgFailed, setImgFailed] = useState(false);
   const isPracticante = card.condicion === 'practicante' || card.tipo?.toLowerCase().includes('practicante');
-  const hasPhoto = Boolean(card.avatar && card.avatar !== '/logo.png' && card.avatar !== '/logo.svg');
+
+  // Buscar avatar del autor en registeredUsers o en el usuario activo si la ficha no tiene foto directa
+  const authorUser = (registeredUsers || []).find((u) => {
+    const cardEmail = (card.correo || '').toLowerCase().trim();
+    const uEmail = (u.correo || '').toLowerCase().trim();
+    if (cardEmail && uEmail && cardEmail === uEmail) return true;
+    if ((card.user_id && card.user_id === u.id) || (card.usuario_id && card.usuario_id === u.id)) return true;
+    const cardName = (card.nombre || '').toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim();
+    const uName = (u.nombre || '').toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim();
+    return cardName && uName && (cardName === uName || cardName.includes(uName) || uName.includes(cardName));
+  });
+
+  const effectiveAvatar = (card.avatar && card.avatar !== '/logo.png' && card.avatar !== '/logo.svg')
+    ? card.avatar
+    : (authorUser?.avatar && authorUser.avatar !== '/logo.png' && authorUser.avatar !== '/logo.svg'
+        ? authorUser.avatar
+        : (user && (
+            (card.correo && user.correo?.toLowerCase() === card.correo?.toLowerCase()) ||
+            (card.user_id && user.id === card.user_id) ||
+            (card.nombre && user.nombre?.toLowerCase() === card.nombre?.toLowerCase())
+          ) ? user.avatar : null));
+
+  const hasPhoto = Boolean(effectiveAvatar && effectiveAvatar !== '/logo.png' && effectiveAvatar !== '/logo.svg');
 
   const rawFortalezas = Array.isArray(card.fortalezas) && card.fortalezas.length > 0
     ? card.fortalezas
@@ -69,13 +90,11 @@ export default function ColleagueCard({
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Avatar: Foto de perfil o silueta de Persona con color del Sidebar */}
-            {hasPhoto ? (
+            {hasPhoto && !imgFailed ? (
               <img
-                src={card.avatar}
+                src={effectiveAvatar}
                 alt={card.nombre}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
+                onError={() => setImgFailed(true)}
                 className="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-md ring-2 ring-[#1E2B58]/30 dark:ring-slate-700 transition-all"
               />
             ) : (
@@ -96,7 +115,7 @@ export default function ColleagueCard({
                 <span
                   className="inline-block ml-1.5 px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider align-middle whitespace-nowrap shadow-xs bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-blue-500/25"
                 >
-                  {isPracticante ? 'Practicante' : (card.tipo === 'Egresado' || isMasculineName(card.nombre) ? 'Egresado' : 'Egresada')}
+                  {isPracticante ? 'Practicante' : 'Colega'}
                 </span>
                 {isPracticante && card.cicloEstudio && (
                   <span className="inline-block ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold align-middle whitespace-nowrap bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -107,28 +126,16 @@ export default function ColleagueCard({
             </div>
           </div>
 
-          {/* Acciones de cabecera: Favorito / Menú Admin */}
+          {/* Acciones de cabecera: Menú de Opciones */}
           <div className="flex items-center gap-1 shrink-0">
-            {onToggleFavorite && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(card);
-                }}
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                  isFavorite
-                    ? 'text-amber-500 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60'
-                    : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-                title={isFavorite ? 'Quitar de contactos clave' : 'Guardar en contactos clave'}
-              >
-                <Star size={16} className={isFavorite ? 'fill-amber-500' : ''} />
-              </button>
-            )}
-
-            {/* Menú de Opciones para Administradora */}
-            {user?.rol === 'admin' && (
+            {/* Menú de Opciones para Administradora o Propietario(a) de la Ficha */}
+            {(user?.rol === 'admin' || (user && (
+              (card.correo && user.correo && card.correo.toLowerCase() === user.correo.toLowerCase()) ||
+              (card.user_id && card.user_id === user.id) ||
+              (card.usuario_id && card.usuario_id === user.id) ||
+              (card.creadoPor && card.creadoPor === user.id) ||
+              (card.nombre && user.nombre && card.nombre.toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim() === user.nombre.toLowerCase().replace(/^(lic\.|licenciado|licenciada)\s*/i, '').trim())
+            ))) && (
               <div className="relative">
                 <button
                   type="button"
