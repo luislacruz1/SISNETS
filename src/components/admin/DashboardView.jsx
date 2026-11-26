@@ -2,439 +2,331 @@ import React from 'react';
 import {
   Users,
   FileText,
-  GraduationCap,
-  Building2,
   Award,
-  Download,
-  Plus,
+  Sparkles,
+  ArrowRight,
+  UserCheck,
+  Building2,
+  Briefcase,
+  Phone,
+  MessageCircle,
+  GraduationCap,
   ShieldCheck,
   TrendingUp,
-  Activity,
-  ArrowRight,
-  ExternalLink,
-  Sparkles,
-  PhoneCall,
-  CheckCircle2,
-  UserCheck
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { formatTitleCase } from '../../utils/genderHelper';
+import { formatTitleCase, isMasculineName } from '../../utils/genderHelper';
 
 export default function DashboardView({
   metricsData,
   registeredUsers = [],
   mentorCards = [],
-  handleExportCSV,
-  handleExportUsersCSV,
-  onOpenCreateUser,
-  onOpenPublishModal,
+  onNavigateToDirectory,
   onNavigateToUsers,
-  onNavigateToDirectory
+  onNavigateToReports
 }) {
-  if (!metricsData) return null;
+  // 1. Los últimos 3 usuarios registrados
+  const latestUsers = registeredUsers.slice(0, 3);
 
-  // Colegas más recientes para el feed de actividad
-  const recentUsers = registeredUsers.slice(0, 5);
-  const recentCards = mentorCards.slice(0, 5);
+  // 2. La última publicación del directorio
+  const latestCard = mentorCards.length > 0 ? mentorCards[0] : null;
+
+  // 3. Top de apoyos más comunes
+  const topApoyos = metricsData?.topFortalezas?.slice(0, 5) || [];
 
   return (
     <div className="space-y-6">
-      {/* 1. BANNER EJECUTIVO ESTILO SISGEIN */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B132B] via-[#0A1128] to-[#141E3E] text-white p-6 sm:p-8 border border-cyan-500/30 shadow-xl shadow-[#0A1128]/20">
-        {/* Glow de fondo */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-blue-600/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-[10px] font-black uppercase tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              Panel de Control en Tiempo Real · SISNETS
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Resumen Estratégico de la Red
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-              Supervisión general de miembros activas, vinculación en centros laborales y cobertura institucional de Trabajo Social en todo el país.
-            </p>
+      {/* HEADER INFORMATIVO */}
+      <div className="rounded-3xl bg-gradient-to-r from-[#0B132B] via-[#0A1128] to-[#141E3E] text-white p-6 sm:p-7 border border-cyan-500/30 shadow-lg shadow-[#0A1128]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-[10px] font-black uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            Panel Informativo en Vivo · SISNETS
           </div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            Resumen de Actividad Reciente
+          </h2>
+          <p className="text-xs text-slate-300 font-medium">
+            Últimas incorporaciones, la publicación más reciente y las especialidades de apoyo más frecuentes en la red.
+          </p>
+        </div>
 
-          {/* Acciones Rápidas en el Banner */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
-            {onOpenCreateUser && (
-              <button
-                type="button"
-                onClick={onOpenCreateUser}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#050B18] font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2 active:scale-95"
-              >
-                <Plus size={16} className="stroke-[2.5]" />
-                <span>Registrar Colegiada</span>
-              </button>
-            )}
-            {onOpenPublishModal && (
-              <button
-                type="button"
-                onClick={onOpenPublishModal}
-                className="px-4 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white font-bold text-xs uppercase tracking-wider border border-white/20 transition-all flex items-center gap-2 active:scale-95"
-              >
-                <FileText size={16} />
-                <span>Publicar Ficha</span>
-              </button>
-            )}
+        {/* Mini Contadores Informativos */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="px-3.5 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-center">
+            <span className="block text-xs font-bold text-slate-400">Total Colegiadas</span>
+            <span className="text-lg font-black text-cyan-400">{registeredUsers.length}</span>
+          </div>
+          <div className="px-3.5 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-center">
+            <span className="block text-xs font-bold text-slate-400">Fichas Activas</span>
+            <span className="text-lg font-black text-emerald-400">{mentorCards.length}</span>
           </div>
         </div>
       </div>
 
-      {/* 2. KPIS SUPERIORES ESTRATÉGICOS (4 TARJETAS) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
-        {/* KPI 1: Total Colegiadas */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
-        >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-600" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Colegiadas en la Red
-            </span>
+      {/* SECCIÓN 1: ÚLTIMOS 3 USUARIOS REGISTRADOS */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
-              <Users size={16} />
+              <UserCheck size={17} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-[#0A1128] dark:text-white uppercase tracking-tight">
+                Últimos 3 Registrados
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Las 3 colegas más recientes que se unieron al sistema
+              </p>
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-[#0A1128] dark:text-white tracking-tight">
-            {metricsData.totalUsers}
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
-            <ShieldCheck size={14} />
-            <span>{metricsData.verificadasCount} con Sello Oficial ({metricsData.verificadasPct}%)</span>
-          </div>
-        </motion.div>
+          {onNavigateToUsers && (
+            <button
+              type="button"
+              onClick={onNavigateToUsers}
+              className="text-xs font-black text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 group"
+            >
+              <span>Ver todos</span>
+              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
+        </div>
 
-        {/* KPI 2: Fichas de Directorio */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0.05 }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
-        >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Fichas Publicadas
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <FileText size={16} />
-            </div>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-[#0A1128] dark:text-white tracking-tight">
-            {metricsData.totalCards}
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-            <PhoneCall size={14} />
-            <span>100% con WhatsApp Directo</span>
-          </div>
-        </motion.div>
+        {latestUsers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            {latestUsers.map((u, idx) => {
+              const isAdmin = u.rol === 'admin';
+              return (
+                <motion.div
+                  key={u.id || u.correo || idx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: idx * 0.05 }}
+                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden"
+                >
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+                    isAdmin ? 'from-amber-400 to-orange-500' : 'from-cyan-400 to-blue-600'
+                  }`} />
 
-        {/* KPI 3: Egresadas vs Practicantes */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0.1 }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
-        >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-600" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Egresadas / Practicantes
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <GraduationCap size={16} />
-            </div>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-[#0A1128] dark:text-white tracking-tight">
-            {metricsData.egresadasCount} <span className="text-sm font-semibold text-slate-400">/</span> {metricsData.practicantesCount}
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden flex mt-2.5">
-            <div
-              className="bg-cyan-500 h-full transition-all duration-500"
-              style={{ width: `${metricsData.totalCards > 0 ? (metricsData.egresadasCount / metricsData.totalCards) * 100 : 50}%` }}
-              title="Egresadas"
-            />
-            <div
-              className="bg-emerald-500 h-full transition-all duration-500"
-              style={{ width: `${metricsData.totalCards > 0 ? (metricsData.practicantesCount / metricsData.totalCards) * 100 : 50}%` }}
-              title="Practicantes"
-            />
-          </div>
-        </motion.div>
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                          isAdmin
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-400/30'
+                            : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border border-cyan-400/30'
+                        }`}>
+                          {u.nombre ? u.nombre.charAt(0).toUpperCase() : 'C'}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-black text-[#0A1128] dark:text-white truncate">
+                            {formatTitleCase(u.nombre)}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 block truncate">
+                            {u.correo}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 ${
+                        isAdmin
+                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
+                          : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {isAdmin ? 'Admin' : 'Colegiada'}
+                      </span>
+                    </div>
 
-        {/* KPI 4: Sectores Institucionales */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0.15 }}
-          className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
-        >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-600" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Sectores Activos
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Building2 size={16} />
-            </div>
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Building2 size={13} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{u.centro || 'SISNETS (Comunidad)'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                        <span className="capitalize">{u.condicion === 'practicante' ? 'Practicante' : 'Egresada'}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock size={11} /> {u.fechaRegistro || 'Reciente'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-[#0A1128] dark:text-white tracking-tight">
-            {metricsData.sectorStats?.length || 6} Sectores
-          </div>
-          <div className="flex items-center gap-1.5 mt-2 text-[11px] font-bold text-purple-600 dark:text-purple-400">
-            <TrendingUp size={14} />
-            <span>Salud, Justicia, DEMUNA, etc.</span>
-          </div>
-        </motion.div>
+        ) : (
+          <p className="text-xs text-slate-400 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+            No hay colegiadas registradas recientemente.
+          </p>
+        )}
       </div>
 
-      {/* 3. GRÁFICOS Y DISTRIBUCIÓN ESTRATÉGICA (2 COLUMNAS) */}
+      {/* SECCIÓN 2: ÚLTIMA PUBLICACIÓN DEL DIRECTORIO Y TOP DE APOYOS (2 COLUMNAS) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-        {/* Columna A: Distribución por Sector Institucional */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4 flex flex-col justify-between">
+        {/* COLUMNA A: ÚLTIMA PUBLICACIÓN DEL DIRECTORIO */}
+        <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm flex flex-col justify-between relative overflow-hidden">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-base font-black text-[#0A1128] dark:text-white uppercase tracking-tight flex items-center gap-2">
-                <span>Distribución por Sector</span>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-[10px] font-black uppercase tracking-wider">
-                  En Vivo
-                </span>
-              </h3>
-              <Building2 size={18} className="text-slate-400" />
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Sparkles size={17} />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-[#0A1128] dark:text-white uppercase tracking-tight">
+                    Última Publicación
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    La ficha más reciente publicada en el Directorio
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                Nueva
+              </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Centros laborales y de prácticas vinculados en la red nacional.
-            </p>
 
-            <div className="space-y-3.5 pt-4">
-              {metricsData.sectorStats.map((sec) => (
-                <div key={sec.name} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-700 dark:text-slate-300">{sec.name}</span>
-                    <span className="text-[#0A1128] dark:text-white font-black">
-                      {sec.count} colegas ({sec.pct}%)
+            {latestCard ? (
+              <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-800/60 dark:via-slate-900 dark:to-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-black text-[#0A1128] dark:text-white">
+                      {formatTitleCase(latestCard.nombre)}
+                    </h4>
+                    <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 block mt-0.5">
+                      {latestCard.tipo || (latestCard.condicion === 'practicante' ? 'Practicante' : 'Egresada')}
                     </span>
                   </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${sec.barColor} transition-all duration-500`}
-                      style={{ width: `${Math.max(sec.pct, 4)}%` }}
-                    />
+                  {latestCard.telefono && (
+                    <a
+                      href={`https://wa.me/${latestCard.telefono.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                    >
+                      <MessageCircle size={13} /> WhatsApp
+                    </a>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 size={14} className="text-slate-400 shrink-0" />
+                    <span className="font-bold text-[#0A1128] dark:text-white truncate">
+                      {latestCard.institucion}
+                    </span>
+                  </div>
+                  {latestCard.cargo && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <Briefcase size={13} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{latestCard.cargo}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Apoyos ofrecidos */}
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                    Apoyo que brinda:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(Array.isArray(latestCard.fortalezas) ? latestCard.fortalezas : (latestCard.apoyo ? latestCard.apoyo.split(' · ') : []))
+                      .slice(0, 3)
+                      .map((f, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-0.5 rounded-md bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold border border-cyan-200 dark:border-cyan-800/40"
+                        >
+                          {f}
+                        </span>
+                      ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 p-6 text-center">
+                Aún no hay fichas publicadas en el directorio.
+              </p>
+            )}
           </div>
 
           {onNavigateToDirectory && (
             <button
               type="button"
               onClick={onNavigateToDirectory}
-              className="w-full pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 flex items-center justify-center gap-1.5 transition-colors group"
+              className="w-full pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 flex items-center justify-center gap-1.5 transition-colors group"
             >
-              <span>Ver todas las fichas en el Directorio</span>
+              <span>Explorar todo el Directorio de Colegas</span>
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
           )}
         </div>
 
-        {/* Columna B: Top Áreas de Apoyo y Fortalezas */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4 flex flex-col justify-between">
+        {/* COLUMNA B: TOP DE APOYOS MÁS COMUNES */}
+        <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-base font-black text-[#0A1128] dark:text-white uppercase tracking-tight flex items-center gap-2">
-                <span>Top Fortalezas de Apoyo</span>
-                <Award size={18} className="text-amber-500" />
-              </h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Award size={17} />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-[#0A1128] dark:text-white uppercase tracking-tight">
+                    Top Apoyos Más Comunes
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Temáticas de orientación más ofrecidas por las colegas
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Especialidades y materias donde las colegas brindan orientación fraterna.
-            </p>
 
-            <div className="space-y-2.5 pt-4">
-              {metricsData.topFortalezas.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-3 hover:border-cyan-400/40 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] font-black text-xs flex items-center justify-center shrink-0 shadow-sm shadow-cyan-500/20">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                      {item.name}
+            <div className="space-y-2.5 mt-3">
+              {topApoyos.length > 0 ? (
+                topApoyos.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-3 hover:border-cyan-400/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className={`w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 ${
+                        idx === 0
+                          ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
+                          : idx === 1
+                            ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                            : idx === 2
+                              ? 'bg-orange-400 text-white'
+                              : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[11px] font-black shrink-0 border border-emerald-500/30">
+                      {item.count} {item.count === 1 ? 'colega' : 'colegas'}
                     </span>
                   </div>
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-black shrink-0 border border-emerald-500/30">
-                    {item.count} {item.count === 1 ? 'colega' : 'colegas'}
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 p-6 text-center">
+                  Las estadísticas de apoyos se calcularán cuando haya publicaciones.
+                </p>
+              )}
             </div>
           </div>
 
-          {onNavigateToUsers && (
+          {onNavigateToReports && (
             <button
               type="button"
-              onClick={onNavigateToUsers}
-              className="w-full pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 flex items-center justify-center gap-1.5 transition-colors group"
+              onClick={onNavigateToReports}
+              className="w-full pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 flex items-center justify-center gap-1.5 transition-colors group"
             >
-              <span>Gestionar miembros en el Módulo de Usuarios</span>
+              <span>Ver estadísticas completas y descargas en Reportes</span>
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
           )}
-        </div>
-      </div>
-
-      {/* 4. FEED DE ACTIVIDAD RECIENTE (TABLA RESUMEN) */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-base font-black text-[#0A1128] dark:text-white uppercase tracking-tight flex items-center gap-2">
-              <Activity size={18} className="text-cyan-500" />
-              <span>Colegiadas Incorporadas Recientemente</span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Últimas profesionales validadas en el ecosistema SISNETS.
-            </p>
-          </div>
-          {onNavigateToUsers && (
-            <button
-              type="button"
-              onClick={onNavigateToUsers}
-              className="text-xs font-black text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1 shrink-0"
-            >
-              <span>Ver padrón completo</span>
-              <ArrowRight size={13} />
-            </button>
-          )}
-        </div>
-
-        {recentUsers.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-black uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-3">Colegiada</th>
-                  <th className="py-3 px-3">Condición</th>
-                  <th className="py-3 px-3">Centro Institucional</th>
-                  <th className="py-3 px-3">Rol</th>
-                  <th className="py-3 px-3">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {recentUsers.map((u) => {
-                  const isAdmin = u.rol === 'admin';
-                  return (
-                    <tr key={u.id || u.correo} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${
-                            isAdmin
-                              ? 'bg-amber-500/15 text-amber-600 border border-amber-400/30'
-                              : 'bg-cyan-500/15 text-cyan-600 border border-cyan-400/30'
-                          }`}>
-                            {u.nombre ? u.nombre.charAt(0).toUpperCase() : 'C'}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-900 dark:text-white block truncate max-w-[200px]">
-                              {formatTitleCase(u.nombre)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
-                              {u.correo}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                          u.condicion === 'practicante'
-                            ? 'bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400'
-                            : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
-                        }`}>
-                          {u.condicion === 'practicante' ? 'Practicante' : 'Egresada'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-600 dark:text-slate-300 truncate max-w-[220px]">
-                        {u.centro || 'SISNETS (Comunidad)'}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                          isAdmin
-                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                        }`}>
-                          {isAdmin ? 'Admin' : 'Colegiada'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px]">
-                        {u.fechaRegistro || 'Reciente'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-xs text-slate-400 py-4 text-center">No hay registros recientes.</p>
-        )}
-      </div>
-
-      {/* 5. CENTRO DE REPORTES Y DESCARGAS OFICIALES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Exportar Directorio */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-[#0A1128] text-white border border-slate-800 flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400">
-              Reporte Oficial
-            </span>
-            <h4 className="text-sm font-black text-white">
-              Exportar Directorio Consolidado
-            </h4>
-            <p className="text-[11px] text-slate-400">
-              Descarga en Excel / CSV con WhatsApp directo, centros y temáticas.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#050B18] font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 active:scale-95 shadow-md shadow-cyan-500/20"
-          >
-            <Download size={14} />
-            <span>Excel / CSV</span>
-          </button>
-        </div>
-
-        {/* Exportar Padrón de Usuarias */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-[#0A1128] text-white border border-slate-800 flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-              Padrón Institucional
-            </span>
-            <h4 className="text-sm font-black text-white">
-              Exportar Padrón de Miembros
-            </h4>
-            <p className="text-[11px] text-slate-400">
-              Lista completa de miembros registrados, roles y fechas de ingreso.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleExportUsersCSV}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-[#050B18] font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 active:scale-95 shadow-md shadow-emerald-500/20"
-          >
-            <Download size={14} />
-            <span>Excel / CSV</span>
-          </button>
         </div>
       </div>
     </div>

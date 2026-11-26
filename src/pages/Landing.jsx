@@ -37,7 +37,7 @@ import Navbar from '../components/layout/Navbar';
 import ColleagueCard from '../components/directory/ColleagueCard';
 import UsersManagement from '../components/admin/UsersManagement';
 import DashboardView from '../components/admin/DashboardView';
-import MetricsView from '../components/admin/MetricsView';
+import ReportsView from '../components/admin/ReportsView';
 import PublicLanding from '../components/public/PublicLanding';
 import MyCardsView from '../components/member/MyCardsView';
 import AccountView from '../components/member/AccountView';
@@ -136,8 +136,8 @@ export default function Landing() {
   const [adminTab, setAdminTabState] = useState(() => {
     try {
       const savedTab = localStorage.getItem('sisnets_active_admin_tab');
-      if (savedTab === 'metricas') return 'dashboard';
-      if (savedTab && ['dashboard', 'directorio', 'usuarios', 'mis-fichas', 'cuenta'].includes(savedTab)) {
+      if (savedTab === 'metricas') return 'reportes';
+      if (savedTab && ['dashboard', 'directorio', 'usuarios', 'reportes', 'mis-fichas', 'cuenta'].includes(savedTab)) {
         return savedTab;
       }
     } catch (e) {
@@ -1204,8 +1204,10 @@ export default function Landing() {
                   {/* Icono Squircle Marino + Título + Subtítulo */}
                   <div className="flex items-center gap-3.5 sm:gap-4 sm:ml-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#0A1128]/20 shrink-0 border border-white/10">
-                      {(adminTab === 'dashboard' || adminTab === 'metricas') ? (
+                      {adminTab === 'dashboard' ? (
                         <LayoutDashboard size={22} />
+                      ) : (adminTab === 'reportes' || adminTab === 'metricas') ? (
+                        <BarChart3 size={22} />
                       ) : adminTab === 'directorio' ? (
                         <BookUser size={22} />
                       ) : adminTab === 'usuarios' ? (
@@ -1220,33 +1222,37 @@ export default function Landing() {
                     </div>
                     <div>
                       <h1 className="text-xl sm:text-2xl font-bold text-[#0A1128] dark:text-slate-100 tracking-tight flex items-center gap-2">
-                        {(adminTab === 'dashboard' || adminTab === 'metricas')
+                        {adminTab === 'dashboard'
                           ? 'Dashboard'
-                          : adminTab === 'directorio'
-                            ? 'Directorio'
-                            : adminTab === 'usuarios'
-                              ? 'Usuarios'
-                              : adminTab === 'mis-fichas'
-                                ? 'Mis Fichas'
-                                : adminTab === 'cuenta'
-                                  ? 'Mi Cuenta'
-                                  : 'Dashboard'}
+                          : (adminTab === 'reportes' || adminTab === 'metricas')
+                            ? 'Reportes'
+                            : adminTab === 'directorio'
+                              ? 'Directorio'
+                              : adminTab === 'usuarios'
+                                ? 'Usuarios'
+                                : adminTab === 'mis-fichas'
+                                  ? 'Mis Fichas'
+                                  : adminTab === 'cuenta'
+                                    ? 'Mi Cuenta'
+                                    : 'Dashboard'}
                         <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold px-2.5 py-0.5 rounded-full shrink-0 uppercase tracking-widest">
                           SISNETS
                         </span>
                       </h1>
                       <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                        {(adminTab === 'dashboard' || adminTab === 'metricas')
-                          ? 'Panel de control general y analítica estratégica de la red'
-                          : adminTab === 'directorio'
-                            ? 'Directorio de Colegas'
-                            : adminTab === 'usuarios'
-                              ? 'Gestión y validación de miembros de la red'
-                              : adminTab === 'mis-fichas'
-                                ? 'Gestión y visualización de todas tus tarjetas institucionales'
-                                : adminTab === 'cuenta'
-                                  ? 'Administra tus datos personales, foto de perfil y contraseña'
-                                  : 'Panel de control general y analítica estratégica de la red'}
+                        {adminTab === 'dashboard'
+                          ? 'Resumen informativo y actividad reciente de la red en tiempo real'
+                          : (adminTab === 'reportes' || adminTab === 'metricas')
+                            ? 'Estadísticas consolidadas, distribución sectorial y descargas oficiales'
+                            : adminTab === 'directorio'
+                              ? 'Directorio de Colegas'
+                              : adminTab === 'usuarios'
+                                ? 'Gestión y validación de miembros de la red'
+                                : adminTab === 'mis-fichas'
+                                  ? 'Gestión y visualización de todas tus tarjetas institucionales'
+                                  : adminTab === 'cuenta'
+                                    ? 'Administra tus datos personales, foto de perfil y contraseña'
+                                    : 'Panel de control general y analítica estratégica de la red'}
                       </p>
                     </div>
                   </div>
@@ -1277,7 +1283,7 @@ export default function Landing() {
                       <RotateCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                     </button>
 
-                    {(adminTab === 'dashboard' || adminTab === 'metricas') && (
+                    {adminTab === 'dashboard' && (
                       <button
                         type="button"
                         onClick={() => setIsCreateUserModalOpen(true)}
@@ -1594,18 +1600,24 @@ export default function Landing() {
                 />
               )}
 
-              {/* TAB 3 (ADMIN): DASHBOARD EJECUTIVO ESTILO SISGEIN */}
-              {user.rol === 'admin' && (adminTab === 'dashboard' || adminTab === 'metricas') && (
+              {/* TAB 3 (ADMIN): DASHBOARD INFORMATIVO */}
+              {user.rol === 'admin' && adminTab === 'dashboard' && (
                 <DashboardView
                   metricsData={metricsData}
                   registeredUsers={registeredUsers}
                   mentorCards={mentorCards}
-                  handleExportCSV={handleExportCSV}
-                  handleExportUsersCSV={handleExportUsersCSV}
-                  onOpenCreateUser={() => setIsCreateUserModalOpen(true)}
-                  onOpenPublishModal={() => setIsPublishModalOpen(true)}
                   onNavigateToUsers={() => setAdminTab('usuarios')}
                   onNavigateToDirectory={() => setAdminTab('directorio')}
+                  onNavigateToReports={() => setAdminTab('reportes')}
+                />
+              )}
+
+              {/* TAB 4 (ADMIN): APARTADO DEDICADO DE REPORTES Y ANALÍTICA */}
+              {user.rol === 'admin' && (adminTab === 'reportes' || adminTab === 'metricas') && (
+                <ReportsView
+                  metricsData={metricsData}
+                  handleExportCSV={handleExportCSV}
+                  handleExportUsersCSV={handleExportUsersCSV}
                 />
               )}
 

@@ -79,14 +79,14 @@ export default function Sidebar({
                       ? 'px-3.5 py-3 text-xs font-bold flex items-center gap-3'
                       : 'w-11 h-11 mx-auto flex items-center justify-center'
                   } ${
-                    (adminTab === 'dashboard' || adminTab === 'metricas')
+                    adminTab === 'dashboard'
                       ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                   }`}
                   title="Dashboard"
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                    (adminTab === 'dashboard' || adminTab === 'metricas')
+                    adminTab === 'dashboard'
                       ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
                       : 'bg-white/[0.04] text-slate-400 group-hover:text-cyan-300 group-hover:bg-white/[0.08]'
                   }`}>
@@ -95,7 +95,7 @@ export default function Sidebar({
                   {isSidebarOpen && (
                     <>
                       <span className="font-bold text-xs truncate">Dashboard</span>
-                      {(adminTab === 'dashboard' || adminTab === 'metricas') && (
+                      {adminTab === 'dashboard' && (
                         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
                       )}
                     </>
@@ -164,6 +164,38 @@ export default function Sidebar({
                       <>
                         <span className="font-bold text-xs truncate">Usuarios</span>
                         {adminTab === 'usuarios' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
+                        )}
+                      </>
+                    )}
+                  </button>
+
+                  {/* Tab: Reportes */}
+                  <button
+                    type="button"
+                    onClick={() => setAdminTab('reportes')}
+                    className={`w-full rounded-2xl transition-all duration-200 group relative ${
+                      isSidebarOpen
+                        ? 'px-3.5 py-3 text-xs font-bold flex items-center gap-3'
+                        : 'w-11 h-11 mx-auto flex items-center justify-center'
+                    } ${
+                      (adminTab === 'reportes' || adminTab === 'metricas')
+                        ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
+                        : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                    title="Reportes & Estadísticas"
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                      (adminTab === 'reportes' || adminTab === 'metricas')
+                        ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
+                        : 'bg-white/[0.04] text-slate-400 group-hover:text-cyan-300 group-hover:bg-white/[0.08]'
+                    }`}>
+                      <BarChart3 size={17} />
+                    </div>
+                    {isSidebarOpen && (
+                      <>
+                        <span className="font-bold text-xs truncate">Reportes</span>
+                        {(adminTab === 'reportes' || adminTab === 'metricas') && (
                           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
                         )}
                       </>
@@ -343,20 +375,20 @@ export default function Sidebar({
                         type="button"
                         onClick={() => { setAdminTab('dashboard'); setIsMobileSidebarOpen(false); }}
                         className={`w-full px-3.5 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition-all ${
-                          (adminTab === 'dashboard' || adminTab === 'metricas')
+                          adminTab === 'dashboard'
                             ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
                             : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                          (adminTab === 'dashboard' || adminTab === 'metricas')
+                          adminTab === 'dashboard'
                             ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
                             : 'text-slate-400 bg-white/[0.04]'
                         }`}>
                           <LayoutDashboard size={17} />
                         </div>
                         <span>Dashboard</span>
-                        {(adminTab === 'dashboard' || adminTab === 'metricas') && (
+                        {adminTab === 'dashboard' && (
                           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
                         )}
                       </button>
@@ -405,6 +437,28 @@ export default function Sidebar({
                           </div>
                           <span>Usuarios</span>
                           {adminTab === 'usuarios' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => { setAdminTab('reportes'); setIsMobileSidebarOpen(false); }}
+                          className={`w-full px-3.5 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition-all ${
+                            (adminTab === 'reportes' || adminTab === 'metricas')
+                              ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-transparent text-white border-l-4 border-l-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10 font-black'
+                              : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                            (adminTab === 'reportes' || adminTab === 'metricas')
+                              ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-[#050B18] shadow-md shadow-cyan-400/30'
+                              : 'text-slate-400 bg-white/[0.04]'
+                          }`}>
+                            <BarChart3 size={17} />
+                          </div>
+                          <span>Reportes</span>
+                          {(adminTab === 'reportes' || adminTab === 'metricas') && (
                             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 ml-auto animate-pulse" />
                           )}
                         </button>
