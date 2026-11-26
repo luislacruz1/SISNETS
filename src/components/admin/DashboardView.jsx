@@ -154,8 +154,8 @@ export default function DashboardView({
           ? latestCardAuthor.foto
           : null;
 
-  // Top de apoyos más comunes
-  const topApoyos = metricsData?.topFortalezas?.slice(0, 5) || [];
+  // Top de apoyos más comunes (limitado a Top 4 según requerimiento)
+  const topApoyos = metricsData?.topFortalezas?.slice(0, 4) || [];
   const maxSupportCount = topApoyos.length > 0 ? Math.max(...topApoyos.map(item => item.count || 1)) : 1;
 
   return (
@@ -288,18 +288,22 @@ export default function DashboardView({
         {/* COLUMNA DERECHA: GRÁFICO DE BARRAS DE TOP APOYOS COMUNES */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-[2rem] p-6 sm:p-7 flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                  <BarChart3 size={16} className="text-blue-500" />
-                  Top Apoyos Más Comunes
-                </h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                  Gráfico comparativo de demandas de orientación
-                </p>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                  <BarChart3 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">
+                    Top 4 Apoyos Más Comunes
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                    Demanda de orientación estratégica
+                  </p>
+                </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider border border-slate-200/80 dark:border-slate-700">
-                Frecuencia
+              <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase tracking-wider border border-blue-200/60 dark:border-blue-800/40">
+                Top 4
               </span>
             </div>
 
@@ -308,41 +312,46 @@ export default function DashboardView({
                 No hay datos suficientes de apoyos publicados.
               </div>
             ) : (
-              <div className="relative pt-2 pb-1">
+              <div className="relative pt-1 pb-1">
                 {/* Cuadrícula Cartesiana de Fondo estilo SISGEIN */}
-                <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
-                  <div className="border-r border-dashed border-slate-300 dark:border-slate-700 h-full w-0" />
-                  <div className="border-r border-dashed border-slate-300 dark:border-slate-700 h-full w-0" />
-                  <div className="border-r border-dashed border-slate-300 dark:border-slate-700 h-full w-0" />
-                  <div className="border-r border-dashed border-slate-300 dark:border-slate-700 h-full w-0" />
+                <div className="absolute inset-0 flex justify-between pointer-events-none opacity-25">
+                  <div className="border-r border-dashed border-slate-200 dark:border-slate-700 h-full w-0" />
+                  <div className="border-r border-dashed border-slate-200 dark:border-slate-700 h-full w-0" />
+                  <div className="border-r border-dashed border-slate-200 dark:border-slate-700 h-full w-0" />
+                  <div className="border-r border-dashed border-slate-200 dark:border-slate-700 h-full w-0" />
                 </div>
 
                 {/* Barras Horizontales con Animación */}
-                <div className="space-y-3 relative z-10">
+                <div className="space-y-4 relative z-10">
                   {topApoyos.map((item, idx) => {
-                    const percentage = Math.min(100, Math.max(16, Math.round(((item.count || 1) / maxSupportCount) * 100)));
+                    const percentage = Math.min(100, Math.max(18, Math.round(((item.count || 1) / maxSupportCount) * 100)));
                     const barColor = COLORS[idx % COLORS.length];
 
                     return (
-                      <div key={idx} className="group/bar space-y-1">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight truncate max-w-[220px] sm:max-w-xs group-hover/bar:text-blue-600 transition-colors">
-                            {formatFortalezaText(item.name)}
-                          </span>
-                          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 shrink-0 ml-2">
+                      <div key={idx} className="group/bar space-y-1.5 p-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                        <div className="flex justify-between items-center gap-2 text-xs">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-slate-700">
+                              #{idx + 1}
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight truncate group-hover/bar:text-blue-600 dark:group-hover/bar:text-blue-400 transition-colors" title={item.name}>
+                              {formatFortalezaText(item.name)}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 shrink-0 px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xs">
                             {item.count} {item.count === 1 ? 'colega' : 'colegas'}
                           </span>
                         </div>
 
-                        <div className="h-5 bg-slate-100 dark:bg-slate-800/80 rounded-xl overflow-hidden p-0.5 relative">
+                        <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 relative shadow-inner">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${percentage}%` }}
                             transition={{ duration: 0.9, delay: idx * 0.1, ease: 'easeOut' }}
-                            className="h-full rounded-lg shadow-sm relative flex items-center justify-end pr-2 group-hover/bar:brightness-110 transition-all"
+                            className="h-full rounded-full shadow-xs relative flex items-center justify-end pr-2 group-hover/bar:brightness-110 transition-all"
                             style={{ backgroundColor: barColor }}
                           >
-                            <span className="text-[10px] font-black text-white drop-shadow-xs">
+                            <span className="text-[9px] font-black text-white drop-shadow-xs">
                               {item.count}
                             </span>
                           </motion.div>
@@ -353,10 +362,10 @@ export default function DashboardView({
                 </div>
 
                 {/* Eje X de Escala Numérica */}
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2.5 border-t border-slate-100 dark:border-slate-800/80 mt-3">
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-3 border-t border-slate-100 dark:border-slate-800/80 mt-2 px-1">
                   <span>0</span>
                   <span>{Math.round(maxSupportCount / 2)}</span>
-                  <span>{maxSupportCount} colegas</span>
+                  <span>{maxSupportCount} colegas máx.</span>
                 </div>
               </div>
             )}
