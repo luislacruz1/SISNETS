@@ -110,8 +110,8 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated, existi
       debeCambiarPassword: true, // Flag de primer acceso con clave temporal
       rol: 'colegiada',
       condicion: 'egresada',
-      centro: 'SISNETS (Comunidad)',
-      sector: 'Comunitario / Trabajo Social',
+      centro: '',
+      sector: '',
       estado: 'activa',
       verificada: true,
       fechaRegistro: new Date().toLocaleDateString('es-PE', {

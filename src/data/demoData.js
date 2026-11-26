@@ -8,8 +8,8 @@ export const ADMIN_RUTH_USER = {
   telefono: '+51 987 654 321',
   rol: 'admin',
   condicion: 'egresada',
-  centro: 'SISNETS (Sede Central)',
-  sector: 'Gestión Institucional',
+  centro: '',
+  sector: '',
   estado: 'activa',
   verificada: true,
   fechaRegistro: '01/01/2026'
@@ -23,8 +23,8 @@ export const LUIS_LACRUZ_USER = {
   telefono: '+51 958 262 585',
   rol: 'admin',
   condicion: 'egresada',
-  centro: 'SISNETS (Sede Central)',
-  sector: 'Gestión Institucional',
+  centro: '',
+  sector: '',
   estado: 'activa',
   verificada: true,
   fechaRegistro: '01/01/2026'

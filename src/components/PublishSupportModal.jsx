@@ -104,10 +104,10 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish, initia
         } else {
           setTelefono('');
         }
-        setCentroLaboral(user.centro || '');
-        setCentroPracticas(user.centro || '');
-        setCargo(user.sector || '');
-        setCicloEstudio('8vo Ciclo');
+        setCentroLaboral('');
+        setCentroPracticas('');
+        setCargo('');
+        setCicloEstudio('VIII Ciclo');
         setFortalezasSeleccionadas([]);
         setOtroTexto('');
       } else {
@@ -467,17 +467,28 @@ export default function PublishSupportModal({ isOpen, onClose, onPublish, initia
                     <label className="block text-[11px] font-bold text-[#0A1128] dark:text-slate-300 uppercase tracking-wider mb-1">
                       Ciclo de Estudio
                     </label>
-                    <select
-                      value={cicloEstudio}
-                      onChange={(e) => setCicloEstudio(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500 shadow-sm"
-                    >
-                      <option value="7mo Ciclo">7mo Ciclo</option>
-                      <option value="8vo Ciclo">8vo Ciclo</option>
-                      <option value="9no Ciclo">9no Ciclo</option>
-                      <option value="10mo Ciclo">10mo Ciclo</option>
-                      <option value="Egresada(o) Reciente">Egresada(o) Reciente (en trámite)</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={cicloEstudio}
+                        onChange={(e) => setCicloEstudio(e.target.value)}
+                        className="w-full pl-3.5 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-violet-200/90 dark:border-violet-800/60 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 shadow-sm transition appearance-none cursor-pointer"
+                      >
+                        <option value="I Ciclo">I Ciclo</option>
+                        <option value="II Ciclo">II Ciclo</option>
+                        <option value="III Ciclo">III Ciclo</option>
+                        <option value="IV Ciclo">IV Ciclo</option>
+                        <option value="V Ciclo">V Ciclo</option>
+                        <option value="VI Ciclo">VI Ciclo</option>
+                        <option value="VII Ciclo">VII Ciclo</option>
+                        <option value="VIII Ciclo">VIII Ciclo</option>
+                        <option value="IX Ciclo">IX Ciclo</option>
+                        <option value="X Ciclo">X Ciclo</option>
+                        <option value="Egresada(o) Reciente">Egresada(o) Reciente (en trámite)</option>
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-violet-500 dark:text-violet-400">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
