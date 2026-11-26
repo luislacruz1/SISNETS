@@ -10,7 +10,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { formatTitleCase } from '../../utils/genderHelper';
+import { formatTitleCase, formatShortName } from '../../utils/genderHelper';
 
 // Paleta oficial de colores gráficos idéntica a SISGEIN
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899'];
@@ -212,16 +212,6 @@ export default function DashboardView({
                   Las 3 incorporaciones más recientes
                 </p>
               </div>
-              {onNavigateToUsers && (
-                <button
-                  type="button"
-                  onClick={onNavigateToUsers}
-                  className="px-3.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-[#0A1128] hover:text-white dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer"
-                >
-                  <span>Ver Padrón</span>
-                  <ArrowUpRight size={13} />
-                </button>
-              )}
             </div>
 
             {latestUsers.length === 0 ? (
@@ -262,9 +252,10 @@ export default function DashboardView({
                         </div>
 
                         <div className="min-w-0">
-                          {/* SOLO NOMBRE COMPLETO */}
+                          {/* NOMBRE: COMPLETO EN ESCRITORIO, CORTO (1ER NOMBRE + 1ER APELLIDO) EN MÓVIL */}
                           <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors uppercase tracking-tight truncate">
-                            {formatTitleCase(u.nombre)}
+                            <span className="sm:hidden">{formatShortName(u.nombre)}</span>
+                            <span className="hidden sm:inline">{formatTitleCase(u.nombre)}</span>
                           </h4>
                         </div>
                       </div>
@@ -291,16 +282,12 @@ export default function DashboardView({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                  <BarChart3 size={16} className="text-blue-500" />
                   Top 4 Apoyos Más Comunes
                 </h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                   Pasa el mouse o presiona para ver el apoyo
                 </p>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase tracking-wider border border-blue-200/60 dark:border-blue-800/40">
-                Top 4
-              </span>
             </div>
 
             {topApoyos.length === 0 ? (
@@ -371,17 +358,6 @@ export default function DashboardView({
               </div>
             )}
           </div>
-
-          {onNavigateToReports && (
-            <button
-              type="button"
-              onClick={onNavigateToReports}
-              className="w-full mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <span>Ver analítica completa en Reportes</span>
-              <ArrowUpRight size={13} />
-            </button>
-          )}
         </div>
       </div>
 
@@ -411,10 +387,11 @@ export default function DashboardView({
             </div>
 
             <div className="min-w-0 space-y-1">
-              {/* 1. NOMBRE COMPLETO + 2. SI ES EGRESADA O PRACTICANTE */}
+              {/* 1. NOMBRE (COMPLETO EN ESCRITORIO, CORTO EN MÓVIL) + 2. SI ES EGRESADA O PRACTICANTE */}
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="text-base sm:text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight truncate">
-                  {formatTitleCase(latestCard.nombre)}
+                  <span className="sm:hidden">{formatShortName(latestCard.nombre)}</span>
+                  <span className="hidden sm:inline">{formatTitleCase(latestCard.nombre)}</span>
                 </h3>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                   isPracticante

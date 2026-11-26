@@ -109,3 +109,47 @@ export function formatTitleCase(str) {
     })
     .join(' ');
 }
+
+/**
+ * Extrae de forma inteligente el primer nombre y el primer apellido,
+ * respetando apellidos compuestos comunes en Perú y Latinoamérica (ej: "La Cruz", "De la Cruz", "Del Valle", "San Martín").
+ */
+export function formatShortName(fullName) {
+  if (!fullName || typeof fullName !== 'string') return '';
+  
+  // Limpiar títulos profesionales iniciales (Lic., Mg., Dr., etc.)
+  const clean = fullName.trim().replace(/^(lic\.|licenciado|licenciada|mg\.|magister|dr\.|dra\.|doctor|doctora|bach\.|bachiller|prof\.|profesor|profesora|ing\.|sr\.|sra\.)\s+/i, '').trim();
+  const tokens = clean.split(/\s+/);
+  if (tokens.length <= 2) return formatTitleCase(clean);
+
+  const compoundPrefixes = new Set(['de', 'la', 'del', 'los', 'las', 'san', 'santa', 'da', 'di', 'van', 'von', 'mc', 'mac']);
+
+  // Si tokens tiene 3 elementos:
+  if (tokens.length === 3) {
+    if (compoundPrefixes.has(tokens[1].toLowerCase())) {
+      // Ej: "Luis La Cruz" -> Nombre="Luis", Apellido="La Cruz"
+      return formatTitleCase(`${tokens[0]} ${tokens[1]} ${tokens[2]}`);
+    }
+    // Ej: "Ruth Lizeth Anastacio" -> Nombre="Ruth", Apellido="Anastacio"
+    return formatTitleCase(`${tokens[0]} ${tokens[2]}`);
+  }
+
+  // 4 o más palabras:
+  // Ej: "Luis Jhonatan La Cruz Urbano" -> tokens = ["Luis", "Jhonatan", "La", "Cruz", "Urbano"]
+  if (compoundPrefixes.has(tokens[2].toLowerCase()) && tokens[3]) {
+    // Apellido paterno compuesto en índice 2: "La Cruz"
+    return formatTitleCase(`${tokens[0]} ${tokens[2]} ${tokens[3]}`);
+  }
+
+  if (compoundPrefixes.has(tokens[1].toLowerCase()) && tokens[2]) {
+    // Si el apellido inicia en índice 1 (solo un nombre de pila): "Luis De La Cruz Urbano"
+    if (compoundPrefixes.has(tokens[2].toLowerCase()) && tokens[3]) {
+      return formatTitleCase(`${tokens[0]} ${tokens[1]} ${tokens[2]} ${tokens[3]}`);
+    }
+    return formatTitleCase(`${tokens[0]} ${tokens[1]} ${tokens[2]}`);
+  }
+
+  // Caso estándar 4 palabras: "Ruth Lizeth Anastacio Moncada" -> "Ruth Anastacio"
+  // "María Pía Marquez Cabanillas" -> "María Marquez"
+  return formatTitleCase(`${tokens[0]} ${tokens[2]}`);
+}

@@ -1283,17 +1283,6 @@ export default function Landing() {
                       <RotateCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                     </button>
 
-                    {adminTab === 'dashboard' && (
-                      <button
-                        type="button"
-                        onClick={() => setIsCreateUserModalOpen(true)}
-                        className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#050B18] px-4 sm:px-5 py-3 rounded-xl shadow-lg shadow-cyan-500/20 active:scale-95 transition-all text-xs sm:text-sm font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer"
-                        title="Registrar Colegiada"
-                      >
-                        <Plus size={18} strokeWidth={3} /> Registrar Colegiada
-                      </button>
-                    )}
-
                     {(adminTab === 'directorio' || adminTab === 'usuarios') && (
                       <button
                         type="button"
