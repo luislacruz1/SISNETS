@@ -61,7 +61,7 @@ export default function Navbar({
             src={user.avatar}
             alt={user.nombre}
             onClick={() => onNavigateToAccount && onNavigateToAccount()}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover shrink-0 shadow-md ring-2 ring-cyan-500/30 cursor-pointer hover:scale-105 transition"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover shrink-0 shadow-md cursor-pointer hover:scale-105 transition"
             title={`${user?.nombre} (Ir a Mi Cuenta)`}
           />
         ) : (

@@ -242,7 +242,7 @@ export default function DashboardView({
                             <img
                               src={userPhoto}
                               alt={u.nombre}
-                              className="w-11 h-11 rounded-xl object-cover ring-2 ring-blue-500/20 shadow-sm transition-transform group-hover:scale-105"
+                              className="w-11 h-11 rounded-xl object-cover shadow-sm transition-transform group-hover:scale-105"
                             />
                           ) : (
                             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#0B132B] to-[#1E2B58] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm transition-transform group-hover:scale-105">
@@ -377,7 +377,7 @@ export default function DashboardView({
                 <img
                   src={effectiveLatestAvatar}
                   alt={latestCard.nombre}
-                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-500/20 shadow-md"
+                  className="w-14 h-14 rounded-2xl object-cover shadow-md"
                 />
               ) : (
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0B132B] to-[#1E2B58] text-white font-black text-xl flex items-center justify-center shrink-0 shadow-md">

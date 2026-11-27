@@ -134,26 +134,42 @@ export default function Landing() {
 
   // Control del Panel de Navegación persistente en recarga (F5)
   const [adminTab, setAdminTabState] = useState(() => {
+    const isAdminUser = user?.rol === 'admin';
     try {
       const savedTab = localStorage.getItem('sisnets_active_admin_tab');
       if (savedTab === 'metricas') return 'reportes';
       if (savedTab && ['dashboard', 'directorio', 'usuarios', 'reportes', 'mis-fichas', 'cuenta'].includes(savedTab)) {
+        if (savedTab === 'dashboard' && !isAdminUser) {
+          return 'directorio';
+        }
         return savedTab;
       }
     } catch (e) {
       console.error(e);
     }
-    return user?.rol === 'admin' ? 'dashboard' : 'directorio';
+    return isAdminUser ? 'dashboard' : 'directorio';
   });
 
   const setAdminTab = (tab) => {
-    setAdminTabState(tab);
+    // Seguridad: el dashboard está estrictamente reservado para administradores
+    let targetTab = tab;
+    if (targetTab === 'dashboard' && user?.rol !== 'admin') {
+      targetTab = 'directorio';
+    }
+    setAdminTabState(targetTab);
     try {
-      localStorage.setItem('sisnets_active_admin_tab', tab);
+      localStorage.setItem('sisnets_active_admin_tab', targetTab);
     } catch (e) {
       console.error(e);
     }
   };
+
+  // Efecto de seguridad: si el usuario no es admin y está en dashboard, redirigir a directorio
+  useEffect(() => {
+    if (user && user.rol !== 'admin' && adminTab === 'dashboard') {
+      setAdminTab('directorio');
+    }
+  }, [user, adminTab]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Control de colapso en escritorio
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false); // Drawer móvil
@@ -1259,29 +1275,31 @@ export default function Landing() {
 
                   {/* Botones de Acción (Recargar + Registrar Directorio en una fila compacta) */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        syncDirectorio(false);
-                        try {
-                          const stored = localStorage.getItem('usuarios_colegio');
-                          if (stored) {
-                            const parsed = JSON.parse(stored);
-                            setRegisteredUsers(cleanAndMergeUsers(parsed));
-                          }
-                        } catch (err) {}
-                        setSearchTerm('');
-                        setUserSearchTerm('');
-                        setSelectedFilter('Todos');
-                        setUserFilterRole('todos');
-                        setIsFilterDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
-                      title="Actualizar listado"
-                    >
-                      <RotateCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-                    </button>
+                    {adminTab !== 'dashboard' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          syncDirectorio(false);
+                          try {
+                            const stored = localStorage.getItem('usuarios_colegio');
+                            if (stored) {
+                              const parsed = JSON.parse(stored);
+                              setRegisteredUsers(cleanAndMergeUsers(parsed));
+                            }
+                          } catch (err) {}
+                          setSearchTerm('');
+                          setUserSearchTerm('');
+                          setSelectedFilter('Todos');
+                          setUserFilterRole('todos');
+                          setIsFilterDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
+                        title="Actualizar listado"
+                      >
+                        <RotateCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+                      </button>
+                    )}
 
                     {(adminTab === 'directorio' || adminTab === 'usuarios') && (
                       <button

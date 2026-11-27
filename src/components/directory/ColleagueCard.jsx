@@ -95,7 +95,7 @@ export default function ColleagueCard({
                 src={effectiveAvatar}
                 alt={card.nombre}
                 onError={() => setImgFailed(true)}
-                className="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-md ring-2 ring-[#1E2B58]/30 dark:ring-slate-700 transition-all"
+                className="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-md transition-all"
               />
             ) : (
               <div

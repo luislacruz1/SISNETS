@@ -155,9 +155,7 @@ export default function UsersManagement({
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}
-                            className={`w-12 h-12 rounded-2xl object-cover shrink-0 shadow-md ring-2 transition-all ${
-                              isAdmin ? 'ring-amber-400' : 'ring-[#1E2B58]/30 dark:ring-slate-700'
-                            }`}
+                            className="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-md transition-all"
                           />
                         ) : (
                           <div
@@ -439,7 +437,7 @@ export default function UsersManagement({
                         onError={(e) => {
                           e.currentTarget.src = '/logo.png';
                         }}
-                        className="w-11 h-11 rounded-xl object-cover ring-2 ring-slate-200 dark:ring-slate-700 shrink-0"
+                        className="w-11 h-11 rounded-xl object-cover shrink-0"
                       />
                     ) : (
                       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#1E2B58] via-[#141E3E] to-[#0A1128] text-white flex items-center justify-center shrink-0 shadow-xs">

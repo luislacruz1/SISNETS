@@ -295,7 +295,7 @@ export const CommunityBoardView = ({ currentUser }) => {
                     <img 
                       src={post.avatar} 
                       alt={post.author} 
-                      className="w-11 h-11 rounded-2xl object-cover ring-2 ring-emerald-500/20"
+                      className="w-11 h-11 rounded-2xl object-cover"
                     />
                     <div>
                       <div className="flex items-center gap-2">
